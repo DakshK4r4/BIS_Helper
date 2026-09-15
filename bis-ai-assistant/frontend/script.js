@@ -76,15 +76,26 @@ function switchView(viewId, element) {
         targetView.classList.add("active-view");
     }
 
-    if (element) {
-
-        document.querySelectorAll(
-            ".nav-menu li"
-        ).forEach(li => {
+    // Update active state on nav-menu
+    document.querySelectorAll(".nav-menu li")
+        .forEach(li => {
             li.classList.remove("active");
         });
 
+    if (element) {
         element.classList.add("active");
+    } else {
+        const matchingLi = document.querySelector(`.nav-menu li[onclick*="'${viewId}'"]`);
+        if (matchingLi) {
+            matchingLi.classList.add("active");
+        }
+    }
+
+    // Synchronize URL hash so browser reload stays on the current view
+    if (window.location.hash !== `#${viewId}`) {
+        try {
+            history.replaceState(null, "", `#${viewId}`);
+        } catch (_) {}
     }
 
     if (viewId === "dashboard") {
@@ -101,7 +112,12 @@ function switchView(viewId, element) {
 // AI ASSISTANT
 // ==================================================
 
-async function triggerAiChat() {
+async function triggerAiChat(event) {
+
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
 
     const input =
         document.getElementById("aiQueryInput");
@@ -110,23 +126,28 @@ async function triggerAiChat() {
         input?.value.trim();
 
     if (!query) {
-
-        alert(
-            "Please enter a question."
-        );
-
+        alert("Please enter a question.");
         return;
     }
 
     const button =
-        document.querySelector(
-            ".submit-arrow"
-        );
+        document.querySelector(".submit-arrow");
 
     showLoading(
         button,
         "Thinking..."
     );
+
+    const inlineResults = document.getElementById("aiChatResults");
+    const inlineLoading = document.getElementById("aiChatLoading");
+    const inlineContent = document.getElementById("aiChatResultContent");
+
+    if (inlineResults && inlineLoading && inlineContent) {
+        inlineResults.style.display = "block";
+        inlineLoading.style.display = "flex";
+        inlineContent.style.display = "none";
+        inlineResults.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
 
     try {
 
@@ -134,34 +155,41 @@ async function triggerAiChat() {
             "/ai/query",
             {
                 method: "POST",
-
                 headers: {
-                    "Content-Type":
-                        "application/json"
+                    "Content-Type": "application/json"
                 },
-
                 body: JSON.stringify({
                     query
                 })
             }
         );
 
-        renderAiResponse(data);
+        // 1. Render response directly on the AI Assistant page (#ai-chat)
+        renderInlineAiResponse(data);
 
-        switchView("ai-response");
+        // 2. Also keep separate #ai-response view populated for compatibility
+        renderAiResponse(data);
 
     } catch (error) {
 
-        console.error(error);
+        console.error("AI Assistant query error:", error);
 
         alert(
             error.message ||
             "AI request failed."
         );
 
+        if (inlineResults) {
+            inlineResults.style.display = "none";
+        }
+
     } finally {
 
         restoreButton(button);
+
+        if (inlineLoading) {
+            inlineLoading.style.display = "none";
+        }
     }
 }
 
@@ -169,17 +197,76 @@ async function triggerAiChat() {
 function quickQuery(queryText) {
 
     const input =
-        document.getElementById(
-            "aiQueryInput"
-        );
+        document.getElementById("aiQueryInput");
 
     if (input) {
-
         input.value = queryText;
-
         triggerAiChat();
     }
 }
+
+
+function renderInlineAiResponse(data) {
+
+    const inlineResults = document.getElementById("aiChatResults");
+    const inlineLoading = document.getElementById("aiChatLoading");
+    const inlineContent = document.getElementById("aiChatResultContent");
+
+    if (!inlineResults || !inlineContent) return;
+
+    inlineResults.style.display = "block";
+    if (inlineLoading) inlineLoading.style.display = "none";
+    inlineContent.style.display = "block";
+
+    const queryEcho = document.getElementById("aiQueryEcho");
+    const numEl = document.getElementById("aiStandardNumber");
+    const titleEl = document.getElementById("aiStandardTitle");
+    const descEl = document.getElementById("aiStandardDesc");
+    const confBadge = document.getElementById("aiConfidenceBadge");
+    const certEl = document.getElementById("aiMetricCert");
+    const catEl = document.getElementById("aiMetricCat");
+    const statusEl = document.getElementById("aiMetricStatus");
+    const srcEl = document.getElementById("aiMetricSource");
+
+    if (queryEcho) queryEcho.innerText = data.query || "";
+
+    if (!data.recommended_standard) {
+        if (numEl) numEl.innerText = "No Matching Standard Found";
+        if (titleEl) titleEl.innerText = "BIS Knowledge Guidance";
+        if (descEl) descEl.innerText = data.answer || "Try searching with other keywords, product name or technical specifications.";
+        if (confBadge) {
+            confBadge.innerHTML = `<i class="fa-solid fa-circle-info"></i> Guidance`;
+        }
+        return;
+    }
+
+    const std = data.recommended_standard;
+    if (numEl) numEl.innerText = std.is_number;
+    if (titleEl) titleEl.innerText = std.title;
+    if (descEl) descEl.innerText = data.answer || std.description || "";
+    if (confBadge) {
+        confBadge.innerHTML = `<i class="fa-solid fa-gauge-high"></i> Confidence: ${data.confidence_score}`;
+    }
+    if (certEl) certEl.innerText = std.certification || "Product Certification";
+    if (catEl) catEl.innerText = std.category || "General";
+    if (statusEl) statusEl.innerText = std.status || "Active";
+    if (srcEl) srcEl.innerText = data.source || "BIS Knowledge Base";
+
+    // Scroll gently into view
+    inlineResults.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+
+function clearAiChatResult() {
+    const inlineResults = document.getElementById("aiChatResults");
+    if (inlineResults) inlineResults.style.display = "none";
+    const input = document.getElementById("aiQueryInput");
+    if (input) {
+        input.value = "";
+        input.focus();
+    }
+}
+
 
 
 function renderAiResponse(data) {
@@ -535,15 +622,36 @@ function openStandard(standard) {
 
 
 // ==================================================
-// DOCUMENT UPLOAD
+// DOCUMENT UPLOAD & ANALYSIS
 // ==================================================
 
 async function uploadDocument(file) {
 
+    if (!file) return;
+
+    const idleState = document.getElementById("dropzoneIdleState");
+    const loadingState = document.getElementById("dropzoneLoadingState");
+    const loadingTitle = document.getElementById("dropzoneLoadingTitle");
+    const loadingSubtitle = document.getElementById("dropzoneLoadingSubtitle");
+    const analyzeBtn = document.getElementById("docAnalyzeBtn");
+    const currentTag = document.getElementById("docCurrentFileName");
+    const currentIcon = document.getElementById("docCurrentFileIcon");
+
+    // Show loading indicator on dropzone
+    if (idleState && loadingState) {
+        idleState.style.display = "none";
+        loadingState.style.display = "block";
+        if (loadingTitle) loadingTitle.innerText = `Analyzing ${file.name}...`;
+        if (loadingSubtitle) loadingSubtitle.innerText = "Extracting text, requirements & computing compliance";
+    }
+
+    if (analyzeBtn) {
+        showLoading(analyzeBtn, "Analyzing...");
+    }
+
     try {
 
         const formData = new FormData();
-
         formData.append("file", file);
 
         const data = await apiRequest(
@@ -554,9 +662,22 @@ async function uploadDocument(file) {
             }
         );
 
-        console.log("Upload response:", data);
+        if (!data.success) {
+            alert(data.error || "Document processing failed.");
+            return;
+        }
 
-        showDocumentResult(data.document);
+        const doc = data.document;
+        window.latestUploadedDocument = doc;
+
+        if (currentTag) {
+            currentTag.innerText = doc.filename;
+        }
+        if (currentIcon) {
+            currentIcon.className = doc.file_type === "pdf" ? "fa-regular fa-file-pdf" : "fa-regular fa-file-word";
+        }
+
+        renderDocumentAnalysis(doc);
 
     } catch (error) {
 
@@ -566,69 +687,205 @@ async function uploadDocument(file) {
             "Document upload failed.\n\n" +
             error.message
         );
+
+    } finally {
+
+        // Restore dropzone state
+        if (idleState && loadingState) {
+            idleState.style.display = "block";
+            loadingState.style.display = "none";
+        }
+
+        if (analyzeBtn) {
+            restoreButton(analyzeBtn);
+        }
     }
 }
 
-function showDocumentResult(documentData) {
 
-    const container =
-        document.querySelector(
-            ".doc-upload-container"
-        );
+function renderDocumentAnalysis(doc) {
+
+    const resultsContainer = document.getElementById("documentAnalysisResults");
+    if (!resultsContainer) return;
+
+    resultsContainer.style.display = "block";
+
+    // 1. Overview & Meta
+    const meta = doc.metadata || {};
+    const prodEl = document.getElementById("docMetaProduct");
+    const stdEl = document.getElementById("docMetaStandard");
+    const mfgEl = document.getElementById("docMetaManufacturer");
+    const modelEl = document.getElementById("docMetaModel");
+    const statusBadge = document.getElementById("docStatusBadge");
+    const summaryText = document.getElementById("docSummaryText");
+
+    if (prodEl) prodEl.innerText = meta.product || "Declared Product";
+    if (stdEl) stdEl.innerText = meta.standard || "Applicable Standard";
+    if (mfgEl) mfgEl.innerText = meta.manufacturer || "Declared Manufacturer";
+    if (modelEl) modelEl.innerText = meta.model || "Declared Model";
+    if (statusBadge) statusBadge.innerText = doc.status || "PROCESSED";
+    if (summaryText) summaryText.innerText = doc.summary || "Summary generated from document extraction.";
+
+    // 2. Compliance Score & Risk
+    const comp = doc.compliance || {};
+    const scoreNum = document.getElementById("docScoreNum");
+    const verdictText = document.getElementById("docVerdictText");
+    const riskBadge = document.getElementById("docRiskBadge");
+    const totalReqs = document.getElementById("docTotalReqsCount");
+    const passedReqs = document.getElementById("docPassedReqsCount");
+    const failedReqs = document.getElementById("docFailedReqsCount");
+    const scoreCircle = document.getElementById("docScoreCircle");
+
+    const score = comp.score !== undefined ? comp.score : 0;
+    if (scoreNum) scoreNum.innerText = score;
+    if (verdictText) verdictText.innerText = comp.result || (score >= 80 ? "Likely Compliant" : "Further Review Required");
+    
+    if (riskBadge) {
+        const risk = comp.risk || (score >= 80 ? "LOW" : (score >= 50 ? "MEDIUM" : "HIGH"));
+        riskBadge.innerText = `RISK: ${risk}`;
+        riskBadge.className = `risk-badge risk-${risk.toLowerCase()}`;
+    }
+
+    if (scoreCircle) {
+        scoreCircle.className = `score-circle-large score-${score >= 80 ? 'high' : (score >= 50 ? 'med' : 'low')}`;
+    }
+
+    if (totalReqs) totalReqs.innerText = comp.total !== undefined ? comp.total : (doc.requirements ? doc.requirements.length : 0);
+    if (passedReqs) passedReqs.innerText = comp.passed !== undefined ? comp.passed : 0;
+    if (failedReqs) failedReqs.innerText = comp.failed !== undefined ? comp.failed : 0;
+
+    // 3. Violations & Gaps
+    const violationsList = document.getElementById("docViolationsList");
+    const violationsBadge = document.getElementById("docViolationsCountBadge");
+    const violations = doc.violations || [];
+
+    if (violationsBadge) {
+        violationsBadge.innerText = `${violations.length} Issue${violations.length === 1 ? '' : 's'} Identified`;
+        violationsBadge.className = violations.length > 0 ? "badge-tag warning" : "badge-tag success";
+    }
+
+    if (violationsList) {
+        if (violations.length === 0) {
+            violationsList.innerHTML = `
+                <div class="violation-item resolved">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <div>
+                        <h4>No Non-Compliance Violations Detected</h4>
+                        <p>All extracted requirements in this document meet standard compliance parameters.</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            violationsList.innerHTML = violations.map(v => `
+                <div class="violation-item severity-${(v.severity || 'medium').toLowerCase()}">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <div>
+                        <div class="violation-title-row">
+                            <h4>${escapeHtml(v.title || v.id)}</h4>
+                            <span class="severity-badge">${escapeHtml(v.severity || 'HIGH')}</span>
+                        </div>
+                        <p>${escapeHtml(v.description)}</p>
+                    </div>
+                </div>
+            `).join("");
+        }
+    }
+
+    // 4. Recommendations
+    const recsList = document.getElementById("docRecommendationsList");
+    const recommendations = doc.recommendations || [];
+
+    if (recsList) {
+        if (recommendations.length === 0) {
+            recsList.innerHTML = `<p class="no-data-msg">No specific corrective actions required.</p>`;
+        } else {
+            recsList.innerHTML = recommendations.map((rec, idx) => `
+                <div class="recommendation-row">
+                    <div class="rec-num-badge">${idx + 1}</div>
+                    <div class="rec-text">${escapeHtml(rec)}</div>
+                </div>
+            `).join("");
+        }
+    }
+
+    // 5. Requirements Table
+    const tbody = document.getElementById("docRequirementsTbody");
+    const reqBadge = document.getElementById("docReqCountBadge");
+    const requirements = doc.requirements || [];
+
+    if (reqBadge) {
+        reqBadge.innerText = `${requirements.length} Requirements`;
+    }
+
+    if (tbody) {
+        if (requirements.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No requirement statements extracted.</td></tr>`;
+        } else {
+            tbody.innerHTML = requirements.map(r => {
+                const st = (r.status || 'PASS').toUpperCase();
+                const stClass = st === 'PASS' ? 'pass' : (st === 'FAIL' ? 'fail' : 'warning');
+                return `
+                    <tr>
+                        <td><span class="req-id-pill">${escapeHtml(r.id)}</span></td>
+                        <td class="req-desc-cell">${escapeHtml(r.text)}</td>
+                        <td><span class="status-pill ${stClass}">${escapeHtml(st)}</span></td>
+                        <td class="req-ev-cell">${escapeHtml(r.evidence || '-')}</td>
+                    </tr>
+                `;
+            }).join("");
+        }
+    }
+
+    // 6. Extracted Text
+    const charCountLabel = document.getElementById("docCharCountLabel");
+    const textPre = document.getElementById("docExtractedTextPre");
+
+    if (charCountLabel) {
+        const count = doc.characters_extracted || (doc.extracted_text ? doc.extracted_text.length : 0);
+        charCountLabel.innerText = `${count.toLocaleString()} characters extracted`;
+    }
+
+    if (textPre) {
+        textPre.innerText = doc.extracted_text || doc.preview || "";
+    }
+
+    // Smooth scroll to results
+    resultsContainer.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+
+function toggleExtractedTextView() {
+    const container = document.getElementById("docExtractedTextContainer");
+    const btnSpan = document.querySelector("#toggleTextBtn span");
+    const icon = document.getElementById("toggleTextIcon");
 
     if (!container) return;
 
-    container.innerHTML = `
-
-        <div class="document-success">
-
-            <div class="success-icon">
-                <i class="fa-solid fa-circle-check"></i>
-            </div>
-
-            <h2>Document Analyzed</h2>
-
-            <p>
-                ${escapeHtml(
-                    documentData.filename
-                )}
-            </p>
-
-            <div class="document-stat">
-                <strong>
-                    ${documentData.characters_extracted}
-                </strong>
-
-                <span>
-                    Characters extracted
-                </span>
-            </div>
-
-            <div class="document-summary">
-
-                <h3>
-                    AI Document Summary
-                </h3>
-
-                <pre>
-${escapeHtml(
-    documentData.summary
-)}
-                </pre>
-
-            </div>
-
-            <button
-                class="primary-btn"
-                onclick="switchView('compliance')"
-            >
-                Continue to Compliance
-                <i class="fa-solid fa-arrow-right"></i>
-            </button>
-
-        </div>
-    `;
+    if (container.style.display === "none") {
+        container.style.display = "block";
+        if (btnSpan) btnSpan.innerText = "Hide Text";
+        if (icon) icon.className = "fa-solid fa-chevron-up";
+    } else {
+        container.style.display = "none";
+        if (btnSpan) btnSpan.innerText = "Show Text";
+        if (icon) icon.className = "fa-solid fa-chevron-down";
+    }
 }
+
+
+function copyExtractedText() {
+    const textPre = document.getElementById("docExtractedTextPre");
+    if (!textPre || !textPre.innerText) return;
+
+    navigator.clipboard.writeText(textPre.innerText)
+        .then(() => {
+            alert("Extracted document text copied to clipboard!");
+        })
+        .catch(() => {
+            alert("Failed to copy to clipboard.");
+        });
+}
+
 
 
 // ==================================================
@@ -1196,202 +1453,168 @@ function setupAiEnter() {
 
 
 // ==================================================
-// DOCUMENT DROPZONE
+// DOCUMENT DROPZONE SETUP
 // ==================================================
 
 function setupDocumentUpload() {
 
-    const dropzone = document.querySelector("#documentDropzone");
-
+    const dropzone = document.querySelector("#documentDropzone") || document.querySelector(".dropzone-box");
     if (!dropzone) return;
 
-    // Prevent browser/form default behavior
+    // Prevent duplicate input creation if already present
+    let input = document.getElementById("hiddenDocFileInput");
+    if (!input) {
+        input = document.createElement("input");
+        input.id = "hiddenDocFileInput";
+        input.type = "file";
+        input.accept = ".pdf,.docx";
+        input.style.display = "none";
+        document.body.appendChild(input);
+
+        input.addEventListener("change", function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                uploadDocument(file);
+                input.value = ""; // Reset so same file can be re-selected if needed
+            }
+        });
+    }
+
+    // Open file browser on dropzone click
     dropzone.addEventListener("click", function(event) {
         event.preventDefault();
         event.stopPropagation();
-    });
-
-    // Create hidden file input
-    const input = document.createElement("input");
-
-    input.type = "file";
-    input.accept = ".pdf,.docx";
-    input.style.display = "none";
-
-    document.body.appendChild(input);
-
-    // Open file browser
-    dropzone.addEventListener("click", function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
         input.click();
     });
 
-    // File selected
-    input.addEventListener("change", function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (input.files && input.files.length > 0) {
-
-            const file = input.files[0];
-
-            console.log("Selected file:", file.name);
-
-            uploadDocument(file);
-        }
-    });
-
-    // Drag over
+    // Drag and drop events on dropzone
     dropzone.addEventListener("dragover", function(event) {
-
         event.preventDefault();
         event.stopPropagation();
-
         dropzone.classList.add("dragover");
     });
 
-    // Drag leave
     dropzone.addEventListener("dragleave", function(event) {
-
         event.preventDefault();
         event.stopPropagation();
-
         dropzone.classList.remove("dragover");
     });
 
-    // Drop
     dropzone.addEventListener("drop", function(event) {
-
         event.preventDefault();
         event.stopPropagation();
-
         dropzone.classList.remove("dragover");
 
         const files = event.dataTransfer.files;
-
         if (files && files.length > 0) {
-
-            const file = files[0];
-
-            console.log("Dropped file:", file.name);
-
-            uploadDocument(file);
+            uploadDocument(files[0]);
         }
+    });
+
+    // Prevent default browser behavior of opening files when dropped outside dropzone
+    window.addEventListener("dragover", function(event) {
+        event.preventDefault();
+    }, false);
+
+    window.addEventListener("drop", function(event) {
+        event.preventDefault();
+    }, false);
+}
+
+
+// ==================================================
+// STANDARDS SEARCH SETUP
+// ==================================================
+
+function setupStandardsSearch() {
+
+    const button = document.querySelector(".search-submit-btn");
+    const input = document.querySelector(".main-search-input-wrap input");
+    const dropdowns = document.querySelectorAll(".filter-dropdowns select");
+
+    if (button) {
+        button.addEventListener("click", function(event) {
+            event.preventDefault();
+            const query = input ? input.value.trim() : "";
+            searchStandards(query);
+        });
+    }
+
+    if (input) {
+        input.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                searchStandards(input.value.trim());
+            }
+        });
+    }
+
+    dropdowns.forEach(select => {
+        select.addEventListener("change", function() {
+            const query = input ? input.value.trim() : "";
+            searchStandards(query);
+        });
     });
 }
 
 
 // ==================================================
-// SEARCH BUTTON
+// DOCUMENT INTELLIGENCE - SUMMARIZE / ANALYZE
 // ==================================================
 
-function setupDocumentUpload() {
+async function summarizeDocument(event) {
 
-    const dropzone = document.querySelector(".dropzone-box");
-
-    if (!dropzone) return;
-
-    // Create hidden file input
-    const input = document.createElement("input");
-
-    input.type = "file";
-    input.accept = ".pdf,.docx";
-    input.style.display = "none";
-
-    document.body.appendChild(input);
-
-
-    // ==================================================
-    // CLICK TO SELECT FILE
-    // ==================================================
-
-    dropzone.addEventListener("click", function(event) {
-
+    if (event) {
         event.preventDefault();
         event.stopPropagation();
+    }
 
-        input.click();
+    // 1. If we already analyzed a document in this session, show it
+    if (window.latestUploadedDocument) {
+        renderDocumentAnalysis(window.latestUploadedDocument);
+        return;
+    }
 
-    });
+    // 2. Fetch the most recently uploaded document from the backend
+    const analyzeBtn = document.getElementById("docAnalyzeBtn");
+    if (analyzeBtn) showLoading(analyzeBtn, "Analyzing...");
 
+    try {
 
-    // ==================================================
-    // FILE SELECTED
-    // ==================================================
+        const data = await apiRequest("/documents");
 
-    input.addEventListener("change", function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (input.files && input.files.length > 0) {
-
-            const file = input.files[0];
-
-            console.log("Selected file:", file.name);
-
-            uploadDocument(file);
+        if (!data.documents || data.documents.length === 0) {
+            alert("Please upload a BIS PDF or DOCX document first.");
+            return;
         }
 
-    });
+        const latest = data.documents[0];
+        const detailData = await apiRequest(`/documents/${latest.id}`);
 
-
-    // ==================================================
-    // DRAG OVER
-    // ==================================================
-
-    dropzone.addEventListener("dragover", function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        dropzone.classList.add("dragover");
-
-    });
-
-
-    // ==================================================
-    // DRAG LEAVE
-    // ==================================================
-
-    dropzone.addEventListener("dragleave", function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        dropzone.classList.remove("dragover");
-
-    });
-
-
-    // ==================================================
-    // DROP FILE
-    // ==================================================
-
-    dropzone.addEventListener("drop", function(event) {
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        dropzone.classList.remove("dragover");
-
-        const files = event.dataTransfer.files;
-
-        if (files && files.length > 0) {
-
-            const file = files[0];
-
-            console.log("Dropped file:", file.name);
-
-            uploadDocument(file);
+        if (detailData.success && detailData.document) {
+            window.latestUploadedDocument = detailData.document;
+            const currentTag = document.getElementById("docCurrentFileName");
+            if (currentTag) currentTag.innerText = detailData.document.filename;
+            renderDocumentAnalysis(detailData.document);
+        } else {
+            alert("Could not load document analysis.");
         }
 
-    });
+    } catch (error) {
 
+        console.error("Document summary error:", error);
+
+        alert(
+            "Unable to analyze document.\n\n" +
+            error.message
+        );
+
+    } finally {
+
+        if (analyzeBtn) restoreButton(analyzeBtn);
+    }
 }
 
 
@@ -1416,8 +1639,8 @@ function setupVerification() {
 
     button.addEventListener(
         "click",
-        () => {
-
+        (event) => {
+            if (event) event.preventDefault();
             verifyLicenseNumber(
                 input.value.trim()
             );
@@ -1463,44 +1686,19 @@ document.addEventListener(
         setupVerification();
 
         loadDashboard();
+
+        // Restore view from URL hash if present (e.g. #ai-chat, #document)
+        const initialHash = window.location.hash.replace("#", "").trim();
+        if (initialHash && document.getElementById(initialHash)) {
+            switchView(initialHash);
+        }
     }
 );
-// --------------------------------------------------
-// DOCUMENT INTELLIGENCE - SUMMARIZE
-// --------------------------------------------------
 
-async function summarizeDocument() {
-
-    try {
-
-        // Get uploaded documents from Flask backend
-        const data = await apiRequest("/documents");
-
-        // Check if any document exists
-        if (!data.documents || data.documents.length === 0) {
-            alert("Please upload a document first.");
-            return;
-        }
-
-        // Get the most recently uploaded document
-        const document = data.documents[0];
-
-        // Display the document summary
-        const message =
-            "Document: " + document.filename +
-            "\n\n" +
-            "Summary:\n" +
-            (document.summary || "No summary available.");
-
-        alert(message);
-
-    } catch (error) {
-
-        console.error("Document summary error:", error);
-
-        alert(
-            "Unable to summarize document.\n\n" +
-            error.message
-        );
+// Listen for hash changes
+window.addEventListener("hashchange", () => {
+    const hash = window.location.hash.replace("#", "").trim();
+    if (hash && document.getElementById(hash)) {
+        switchView(hash);
     }
-}
+});

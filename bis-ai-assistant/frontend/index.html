@@ -178,7 +178,7 @@
 
                     <div class="hero-actions">
 
-                        <button class="primary-btn"
+                        <button type="button" class="primary-btn"
                                 onclick="switchView('ai-chat')">
 
                             <i class="fa-solid fa-wand-magic-sparkles"></i>
@@ -186,7 +186,7 @@
 
                         </button>
 
-                        <button class="secondary-btn"
+                        <button type="button" class="secondary-btn"
                                 onclick="switchView('standards')">
 
                             <i class="fa-solid fa-compass"></i>
@@ -303,16 +303,16 @@
 
                     <div class="chat-input-actions">
 
-                        <button>
+                        <button type="button">
                             <i class="fa-solid fa-microphone"></i>
                         </button>
 
-                        <button>
+                        <button type="button">
                             <i class="fa-solid fa-paperclip"></i>
                         </button>
 
-                        <button class="submit-arrow"
-                                onclick="triggerAiChat()">
+                        <button type="button" class="submit-arrow"
+                                onclick="triggerAiChat(event)">
 
                             <i class="fa-solid fa-arrow-right"></i>
 
@@ -369,7 +369,97 @@
 
                 </div>
 
+                <!-- INLINE AI ASSISTANT RESPONSE CONTAINER -->
+                <div id="aiChatResults" class="ai-chat-results-container" style="display: none;">
+
+                    <div id="aiChatLoading" class="ai-inline-loading" style="display: none;">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <span>Searching BIS Standards and analyzing query...</span>
+                    </div>
+
+                    <div id="aiChatResultContent" class="ai-inline-result" style="display: none;">
+
+                        <div class="query-echo-bar" id="aiQueryEcho">
+                            Query will appear here
+                        </div>
+
+                        <div class="answer-card-box">
+
+                            <div class="answer-card-header">
+
+                                <div class="rec-badge-left">
+                                    <i class="fa-solid fa-circle-check"></i>
+                                    Recommended Standard
+                                </div>
+
+                                <div class="confidence-badge" id="aiConfidenceBadge">
+                                    <i class="fa-solid fa-gauge-high"></i>
+                                    Confidence: 95%
+                                </div>
+
+                            </div>
+
+                            <h2 id="aiStandardNumber">IS Number</h2>
+
+                            <p class="std-subtitle" id="aiStandardTitle">
+                                Standard Title
+                            </p>
+
+                            <p class="std-desc-text" id="aiStandardDesc">
+                                Standard Description
+                            </p>
+
+                            <div class="card-action-bar">
+
+                                <button type="button" class="primary-btn" id="aiViewStandardBtn" onclick="switchView('standards')">
+                                    <i class="fa-regular fa-eye"></i>
+                                    View in Standards Explorer
+                                </button>
+
+                                <button type="button" class="outline-btn" onclick="switchView('compliance')">
+                                    <i class="fa-solid fa-clipboard-check"></i>
+                                    Check Compliance
+                                </button>
+
+                                <button type="button" class="secondary-btn" onclick="clearAiChatResult()">
+                                    <i class="fa-solid fa-rotate-left"></i>
+                                    New Question
+                                </button>
+
+                            </div>
+
+                            <div class="sub-metrics-row">
+
+                                <div>
+                                    <span>Certification Type</span>
+                                    <strong id="aiMetricCert">Product Certification</strong>
+                                </div>
+
+                                <div>
+                                    <span>Category</span>
+                                    <strong id="aiMetricCat">Electrical</strong>
+                                </div>
+
+                                <div>
+                                    <span>Status</span>
+                                    <strong id="aiMetricStatus">Active</strong>
+                                </div>
+
+                                <div>
+                                    <span>Source</span>
+                                    <strong id="aiMetricSource">BIS Knowledge Base</strong>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
+
 
         </section>
 
@@ -522,7 +612,7 @@
                     <input type="text"
                            placeholder="Search for product, IS number, category, or keyword...">
 
-                    <button class="search-submit-btn">
+                    <button type="button" class="search-submit-btn">
 
                         <i class="fa-solid fa-arrow-right"></i>
 
@@ -923,55 +1013,226 @@
                     Upload BIS Document
                 </h2>
 
+                <p class="doc-upload-desc">
+                    Upload your product specification, test reports, or standard documentation (PDF / DOCX) for automated compliance analysis, requirement extraction, and violation detection.
+                </p>
 
                 <div class="dropzone-box"
                      id="documentDropzone">
 
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <div id="dropzoneIdleState">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
 
-                    <h4>
-                        Drag & drop your BIS document here
-                    </h4>
+                        <h4>
+                            Drag & drop your BIS document here
+                        </h4>
 
-                    <span>
-                        or click to browse
-                    </span>
+                        <span>
+                            or click to browse
+                        </span>
 
-                    <small>
-                        PDF, DOCX • Maximum 20MB
-                    </small>
+                        <small>
+                            PDF, DOCX • Maximum 20MB
+                        </small>
+                    </div>
+
+                    <div id="dropzoneLoadingState" style="display: none;">
+                        <i class="fa-solid fa-spinner fa-spin doc-spinner"></i>
+                        <h4 id="dropzoneLoadingTitle">Analyzing Document...</h4>
+                        <span id="dropzoneLoadingSubtitle">Extracting text, requirements & checking compliance</span>
+                    </div>
 
                 </div>
 
 
                 <div class="upload-footer-row">
 
-                    <div class="recent-tag">
+                    <div class="recent-tag" id="docCurrentFileTag">
 
-                        <i class="fa-regular fa-file-pdf"></i>
+                        <i class="fa-regular fa-file-lines" id="docCurrentFileIcon"></i>
 
-                        IS_10322_2012.pdf
-
-                        <span>
-                            Uploaded 2 mins ago
+                        <span id="docCurrentFileName">
+                            No document uploaded yet
                         </span>
+
+                        <span id="docCurrentFileMeta" style="display: none;"></span>
 
                     </div>
 
-                    
-
-                    <!-- FIXED SUMMARIZE BUTTON -->
                     <button
-    type="button"
-    class="primary-btn"
-    onclick="event.preventDefault(); event.stopPropagation(); summarizeDocument()"
->
-    Summarize
-    <i class="fa-solid fa-arrow-right"></i>
-</button>
+                        type="button"
+                        class="primary-btn"
+                        id="docAnalyzeBtn"
+                        onclick="summarizeDocument(event)"
+                    >
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        Analyze Document
+                    </button>
+
+                </div>
+
+                <!-- DOCUMENT INTELLIGENCE RESULTS -->
+                <div id="documentAnalysisResults" class="doc-intelligence-results" style="display: none;">
+
+                    <!-- 1. OVERVIEW & SUMMARY -->
+                    <div class="doc-card doc-summary-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-title">
+                                <i class="fa-solid fa-file-invoice"></i>
+                                <h3>Document Overview & Summary</h3>
+                            </div>
+                            <span class="badge-tag processed" id="docStatusBadge">PROCESSED</span>
+                        </div>
+
+                        <div class="doc-meta-grid" id="docMetaGrid">
+                            <div class="doc-meta-item">
+                                <span>Product</span>
+                                <strong id="docMetaProduct">-</strong>
+                            </div>
+                            <div class="doc-meta-item">
+                                <span>Reference Standard</span>
+                                <strong id="docMetaStandard">-</strong>
+                            </div>
+                            <div class="doc-meta-item">
+                                <span>Manufacturer</span>
+                                <strong id="docMetaManufacturer">-</strong>
+                            </div>
+                            <div class="doc-meta-item">
+                                <span>Model / Type</span>
+                                <strong id="docMetaModel">-</strong>
+                            </div>
+                        </div>
+
+                        <div class="doc-summary-box">
+                            <h4>AI Structured Summary</h4>
+                            <p id="docSummaryText"></p>
+                        </div>
+                    </div>
+
+                    <!-- 2. COMPLIANCE ANALYSIS CARD -->
+                    <div class="doc-card doc-compliance-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-title">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                <h3>Compliance Analysis</h3>
+                            </div>
+                            <span class="risk-badge" id="docRiskBadge">RISK: LOW</span>
+                        </div>
+
+                        <div class="compliance-score-dashboard">
+                            <div class="compliance-gauge-wrapper">
+                                <div class="score-circle-large" id="docScoreCircle">
+                                    <span id="docScoreNum">80</span>%
+                                </div>
+                                <div class="gauge-label">
+                                    <strong id="docVerdictText">Likely Compliant</strong>
+                                    <span>Overall BIS Compliance Rating</span>
+                                </div>
+                            </div>
+
+                            <div class="compliance-stats-boxes">
+                                <div class="c-stat-box">
+                                    <span class="c-num" id="docTotalReqsCount">10</span>
+                                    <span class="c-lbl">Total Requirements</span>
+                                </div>
+                                <div class="c-stat-box pass">
+                                    <span class="c-num" id="docPassedReqsCount">8</span>
+                                    <span class="c-lbl">Requirements Passed</span>
+                                </div>
+                                <div class="c-stat-box fail">
+                                    <span class="c-num" id="docFailedReqsCount">2</span>
+                                    <span class="c-lbl">Requirements Failed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. VIOLATIONS & NON-COMPLIANCE GAPS -->
+                    <div class="doc-card doc-violations-card" id="docViolationsSection">
+                        <div class="doc-card-header">
+                            <div class="doc-card-title">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <h3>Violations & Compliance Gaps</h3>
+                            </div>
+                            <span class="badge-tag warning" id="docViolationsCountBadge">2 Issues Detected</span>
+                        </div>
+
+                        <div class="violations-list" id="docViolationsList">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- 4. ACTIONABLE AI RECOMMENDATIONS -->
+                    <div class="doc-card doc-recommendations-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-title">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <h3>Actionable Recommendations</h3>
+                            </div>
+                            <span class="badge-tag info">BIS Roadmap</span>
+                        </div>
+
+                        <div class="recommendations-container" id="docRecommendationsList">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- 5. EXTRACTED REQUIREMENTS -->
+                    <div class="doc-card doc-requirements-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-title">
+                                <i class="fa-solid fa-list-check"></i>
+                                <h3>Extracted Requirements & Evidence Status</h3>
+                            </div>
+                            <span class="badge-tag info" id="docReqCountBadge">10 Requirements</span>
+                        </div>
+
+                        <div class="requirements-table-wrapper">
+                            <table class="requirements-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">ID</th>
+                                        <th>Requirement Description</th>
+                                        <th style="width: 110px;">Status</th>
+                                        <th>Document Evidence / Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="docRequirementsTbody">
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 6. RAW EXTRACTED TEXT VIEWER -->
+                    <div class="doc-card doc-text-viewer-card">
+                        <div class="doc-card-header" onclick="toggleExtractedTextView()" style="cursor: pointer;">
+                            <div class="doc-card-title">
+                                <i class="fa-solid fa-align-left"></i>
+                                <h3>Extracted Document Text</h3>
+                            </div>
+                            <button type="button" class="text-link-btn" id="toggleTextBtn">
+                                <span>Show Text</span>
+                                <i class="fa-solid fa-chevron-down" id="toggleTextIcon"></i>
+                            </button>
+                        </div>
+
+                        <div id="docExtractedTextContainer" style="display: none; margin-top: 15px;">
+                            <div class="extracted-text-meta">
+                                <span id="docCharCountLabel">4,094 characters extracted</span>
+                                <button type="button" class="copy-btn" onclick="copyExtractedText()">
+                                    <i class="fa-regular fa-copy"></i>
+                                    Copy Text
+                                </button>
+                            </div>
+                            <pre class="extracted-text-content" id="docExtractedTextPre"></pre>
+                        </div>
+                    </div>
+
                 </div>
 
             </div>
+
 
         </section>
 
@@ -1023,7 +1284,7 @@
                     <input type="text"
                            value="CM/L-1234567">
 
-                    <button class="primary-btn">
+                    <button type="button" class="primary-btn">
                         Verify
                     </button>
 

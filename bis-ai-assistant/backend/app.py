@@ -8,7 +8,8 @@ from werkzeug.utils import secure_filename
 from database import get_db, init_db
 from ai_engine import process_ai_query
 from compliance_engine import analyze_compliance
-from document_engine import extract_document, generate_summary
+from document_engine import extract_document, generate_summary, analyze_document_content
+from flask import send_from_directory
 
 
 # ============================================================
@@ -52,17 +53,40 @@ ALLOWED_EXTENSIONS = {
 
 
 # ============================================================
-# HOME
+# HOME / FRONTEND
 # ============================================================
+
+FRONTEND_DIR = os.path.abspath(
+    os.path.join(BASE_DIR, "..", "frontend")
+)
 
 @app.route("/")
 def home():
+    index_file = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_file):
+        return send_from_directory(FRONTEND_DIR, "index.html")
 
     return jsonify({
         "status": "success",
-        "message": "SIH Backend is running",
+        "message": "BIS AI Assistant Backend is running",
         "server": "Flask"
     })
+
+@app.route("/<path:filename>")
+def static_proxy(filename):
+    if filename.startswith("api/"):
+        return jsonify({"error": "Endpoint not found"}), 404
+
+    target_file = os.path.join(FRONTEND_DIR, filename)
+    if os.path.exists(target_file):
+        return send_from_directory(FRONTEND_DIR, filename)
+
+    index_file = os.path.join(FRONTEND_DIR, "index.html")
+    if os.path.exists(index_file):
+        return send_from_directory(FRONTEND_DIR, "index.html")
+
+    return jsonify({"error": "File not found"}), 404
+
 
 
 # ============================================================
@@ -427,26 +451,24 @@ def upload_document():
         if not text or not text.strip():
 
             return jsonify({
-
                 "success": False,
-
                 "error": (
                     "No readable text was found in this "
                     "document. The document may be "
                     "scanned/image-based and may require OCR."
                 ),
-
-                "status": "OCR_REQUIRED"
-
+                "status": "OCR_REQUIRED",
+                "document": None
             }), 200
 
-
         # ----------------------------------------------------
-        # 6. Generate summary
+        # 6. Analyze document (Summary, Requirements, Compliance, Violations, Recommendations)
         # ----------------------------------------------------
 
-        summary = generate_summary(text)
-
+        analysis = analyze_document_content(text, filename)
+        summary = analysis.get("summary", "")
+        compliance_data = analysis.get("compliance", {})
+        compliance_score = compliance_data.get("score", None)
 
         # ----------------------------------------------------
         # 7. Save document in database
@@ -469,68 +491,65 @@ def upload_document():
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-
             filename,
-
             path,
-
             extension,
-
             text,
-
             summary,
-
-            None,
-
+            compliance_score,
             0,
-
             "PROCESSED",
-
             __import__(
                 "datetime"
             ).datetime.now().isoformat()
-
         ))
 
         document_id = cursor.lastrowid
 
+        # Also store compliance report if applicable
+        if analysis.get("requirements"):
+            prod_name = analysis.get("metadata", {}).get("product") or filename
+            std_name = analysis.get("metadata", {}).get("standard") or "Standard Analysis"
+            conn.execute("""
+                INSERT INTO compliance_reports
+                (product, standard, score, risk, result)
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                prod_name,
+                std_name,
+                compliance_score,
+                compliance_data.get("risk", "MEDIUM"),
+                compliance_data.get("result", "Analyzed")
+            ))
+
         conn.commit()
         conn.close()
 
-
         # ----------------------------------------------------
-        # 8. Return response
+        # 8. Return comprehensive intelligence response
         # ----------------------------------------------------
 
         return jsonify({
-
             "success": True,
-
-            "message": (
-                "Document uploaded and processed successfully."
-            ),
-
+            "message": "Document uploaded and analyzed successfully.",
             "document": {
-
                 "id": document_id,
-
                 "filename": filename,
-
                 "file_type": extension,
-
                 "status": "PROCESSED",
-
                 "ocr_used": False,
-
                 "characters_extracted": len(text),
-
+                "extracted_text": text,
+                "preview": text[:1000],
                 "summary": summary,
-
-                "preview": text[:1000]
-
+                "metadata": analysis.get("metadata", {}),
+                "requirements": analysis.get("requirements", []),
+                "compliance": compliance_data,
+                "violations": analysis.get("violations", []),
+                "recommendations": analysis.get("recommendations", [])
             }
-
         })
+
 
 
     except Exception as error:
@@ -635,20 +654,24 @@ def get_single_document(document_id):
         if not row:
 
             return jsonify({
-
                 "success": False,
-
                 "error": "Document not found."
-
             }), 404
 
+        doc_dict = dict(row)
+        if doc_dict.get("extracted_text"):
+            analysis = analyze_document_content(doc_dict["extracted_text"], doc_dict.get("filename", ""))
+            doc_dict["metadata"] = analysis.get("metadata", {})
+            doc_dict["requirements"] = analysis.get("requirements", [])
+            doc_dict["compliance"] = analysis.get("compliance", {})
+            doc_dict["violations"] = analysis.get("violations", [])
+            doc_dict["recommendations"] = analysis.get("recommendations", [])
+
         return jsonify({
-
             "success": True,
-
-            "document": dict(row)
-
+            "document": doc_dict
         })
+
 
     except Exception as error:
 
