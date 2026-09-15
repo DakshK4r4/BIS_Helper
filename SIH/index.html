@@ -1,0 +1,467 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIS AI Assistant - Understand Indian Standards & Simplify BIS Compliance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('landing')">
+                <div class="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-center font-bold text-lg">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-slate-900 text-lg tracking-tight">BIS AI Assistant</span>
+                    <span class="block text-xs text-slate-500 font-medium">Your Intelligent Guide to Indian Standards & BIS Services</span>
+                </div>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
+                <button onclick="switchView('landing')" class="hover:text-blue-600 transition">Home</button>
+                <button onclick="switchView('explorer')" class="hover:text-blue-600 transition">Standards Explorer</button>
+                <button onclick="switchView('compliance')" class="hover:text-blue-600 transition">Compliance Checker</button>
+                <button onclick="switchView('chat')" class="hover:text-blue-600 transition">Ask BIS AI</button>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button onclick="openRoleModal()" class="hidden sm:inline-flex items-center text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 hover:bg-blue-100 transition">
+                    <i class="fa-solid fa-user-tag mr-1.5"></i> Select Role
+                </button>
+                <div class="flex items-center space-x-2 border-l pl-4 border-slate-200">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces" alt="User" class="w-8 h-8 rounded-full object-cover">
+                    <span class="text-sm font-medium text-slate-700 hidden lg:inline">Raj Kumar</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow">
+
+        <!-- VIEW 1: LANDING PAGE -->
+        <section id="view-landing" class="view-section">
+            <!-- Hero Section -->
+            <div class="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white py-16 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+                <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+                    <div class="space-y-6">
+                        <span class="bg-blue-800/80 text-blue-200 text-xs font-semibold px-3 py-1 rounded-full border border-blue-700">AI-Powered Compliance Suite</span>
+                        <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+                            Understand Indian Standards. Simplify BIS Compliance.
+                        </h1>
+                        <p class="text-blue-100 text-lg leading-relaxed">
+                            An AI-powered assistant to discover Indian Standards, understand testing requirements, check compliance, and access BIS services—all in one place.
+                        </p>
+                        <div class="flex flex-wrap gap-4 pt-2">
+                            <button onclick="switchView('chat')" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition flex items-center space-x-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>Ask BIS AI</span>
+                            </button>
+                            <button onclick="switchView('explorer')" class="bg-white/10 hover:bg-white/20 text-white border border-white/30 font-semibold px-6 py-3 rounded-xl transition flex items-center space-x-2">
+                                <i class="fa-solid fa-book-open"></i>
+                                <span>Explore Standards</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-2xl space-y-4">
+                        <div class="text-sm font-semibold text-blue-200 uppercase tracking-wider">Try these examples</div>
+                        <div class="space-y-3">
+                            <div onclick="switchView('chat')" class="bg-white/5 hover:bg-white/10 p-3.5 rounded-xl border border-white/10 cursor-pointer transition flex items-center justify-between">
+                                <span class="text-sm">What IS standard applies to packaged drinking water?</span>
+                                <i class="fa-solid fa-arrow-right text-blue-300"></i>
+                            </div>
+                            <div onclick="switchView('chat')" class="bg-white/5 hover:bg-white/10 p-3.5 rounded-xl border border-white/10 cursor-pointer transition flex items-center justify-between">
+                                <span class="text-sm">How can I obtain ISI certification for my product?</span>
+                                <i class="fa-solid fa-arrow-right text-blue-300"></i>
+                            </div>
+                            <div onclick="switchView('compliance')" class="bg-white/5 hover:bg-white/10 p-3.5 rounded-xl border border-white/10 cursor-pointer transition flex items-center justify-between">
+                                <span class="text-sm">Check compliance for electrical safety</span>
+                                <i class="fa-solid fa-arrow-right text-blue-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Access Tiles -->
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <h2 class="text-xl font-bold text-slate-900 mb-6">Quick Actions & Services</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div onclick="switchView('chat')" class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-robot text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm text-slate-800">Ask BIS AI</h3>
+                        <p class="text-xs text-slate-500 mt-1">Get instant answers</p>
+                    </div>
+                    <div onclick="switchView('explorer')" class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-magnifying-glass text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm text-slate-800">Search Standards</h3>
+                        <p class="text-xs text-slate-500 mt-1">Find Indian Standards</p>
+                    </div>
+                    <div onclick="switchView('compliance')" class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-clipboard-check text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm text-slate-800">Check Compliance</h3>
+                        <p class="text-xs text-slate-500 mt-1">Verify requirements</p>
+                    </div>
+                    <div onclick="switchView('chat')" class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-certificate text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm text-slate-800">BIS Certification</h3>
+                        <p class="text-xs text-slate-500 mt-1">Start certification journey</p>
+                    </div>
+                    <div onclick="switchView('explorer')" class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-building-shield text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm text-slate-800">Find BIS Services</h3>
+                        <p class="text-xs text-slate-500 mt-1">Access government services</p>
+                    </div>
+                    <div onclick="switchView('explorer')" class="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition text-center group">
+                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fa-solid fa-download text-xl"></i>
+                        </div>
+                        <h3 class="font-semibold text-sm text-slate-800">Download Standards</h3>
+                        <p class="text-xs text-slate-500 mt-1">Get official documents</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: STANDARDS EXPLORER -->
+        <section id="view-explorer" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">Standards Explorer</h1>
+                    <p class="text-sm text-slate-500">Search Indian Standards by keyword, product, or industry standard.</p>
+                </div>
+                <div class="relative w-full md:w-96">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" placeholder="Search IS 302, Electrical, Food..." class="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Product Category</label>
+                    <select class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none">
+                        <option>All Categories</option>
+                        <option>Electronics</option>
+                        <option>Food & Agri</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Industry</label>
+                    <select class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none">
+                        <option>All Industries</option>
+                        <option>Consumer Goods</option>
+                        <option>Heavy Machinery</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Standard Type</label>
+                    <select class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none">
+                        <option>All Types</option>
+                        <option>Safety</option>
+                        <option>Performance</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Status</label>
+                    <select class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none">
+                        <option>Active</option>
+                        <option>Under Revision</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 uppercase mb-1">Mandatory / Voluntary</label>
+                    <select class="w-full text-sm bg-slate-50 border border-slate-200 rounded-lg p-2 focus:outline-none">
+                        <option>All</option>
+                        <option>Mandatory</option>
+                        <option>Voluntary</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 rounded-lg transition">Apply Filters</button>
+                </div>
+            </div>
+
+            <!-- Search Results Table -->
+            <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+                    <span class="font-bold text-slate-700 text-sm">Search Results (1,245)</span>
+                    <span class="text-xs text-slate-500">Showing 1-3 of relevant standards</span>
+                </div>
+                <div class="divide-y divide-slate-200">
+                    <div class="p-4 sm:px-6 hover:bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-blue-600">IS 302-1</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-medium">Active</span>
+                                <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">Mandatory</span>
+                            </div>
+                            <p class="text-sm font-medium text-slate-900">Safety of Household and Similar Electrical Appliances - Part 1: General Requirements</p>
+                            <p class="text-xs text-slate-500">Electrical & Electronics • Published: 2024</p>
+                        </div>
+                        <button onclick="switchView('detail')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-4 py-2 rounded-lg text-sm transition">View Details</button>
+                    </div>
+                    <div class="p-4 sm:px-6 hover:bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-blue-600">IS 13200</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-medium">Active</span>
+                                <span class="bg-amber-100 text-amber-800 text-xs px-2 py-0.5 rounded font-medium">Voluntary</span>
+                            </div>
+                            <p class="text-sm font-medium text-slate-900">Packaged Drinking Water - Specification</p>
+                            <p class="text-xs text-slate-500">Food & Agriculture • Published: 2019</p>
+                        </div>
+                        <button onclick="switchView('detail')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-4 py-2 rounded-lg text-sm transition">View Details</button>
+                    </div>
+                    <div class="p-4 sm:px-6 hover:bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-blue-600">IS 10462</span>
+                                <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded font-medium">Active</span>
+                                <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded font-medium">Mandatory</span>
+                            </div>
+                            <p class="text-sm font-medium text-slate-900">Toys - Safety Requirements</p>
+                            <p class="text-xs text-slate-500">Consumer Goods • Published: 2022</p>
+                        </div>
+                        <button onclick="switchView('detail')" class="bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-4 py-2 rounded-lg text-sm transition">View Details</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: STANDARD DETAIL & EXPLAIN SIMPLY -->
+        <section id="view-detail" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-4">
+                <button onclick="switchView('explorer')" class="text-sm text-blue-600 font-semibold flex items-center space-x-1 hover:underline">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Back to Search Results</span>
+                </button>
+            </div>
+            <div class="bg-white p-6 rounded-xl border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <h1 class="text-2xl font-bold text-slate-900">IS 302-1</h1>
+                        <span class="bg-green-100 text-green-800 text-xs px-2.5 py-1 rounded font-semibold">Active</span>
+                    </div>
+                    <p class="text-slate-600 font-medium">Safety of Household and Similar Electrical Appliances – Part 1: General Requirements</p>
+                </div>
+                <div class="flex space-x-3">
+                    <button onclick="switchView('compliance')" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition flex items-center space-x-2">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        <span>Check Compliance</span>
+                    </button>
+                    <button class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold px-4 py-2.5 rounded-lg transition flex items-center space-x-2">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Download PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Detail Tabs Content -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+                        <h2 class="text-lg font-bold text-slate-900 flex items-center space-x-2 text-blue-600">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>Explain Simply (AI Summary)</span>
+                        </h2>
+                        <div class="p-4 bg-blue-50/50 rounded-xl border border-blue-100 text-sm text-slate-700 leading-relaxed space-y-3">
+                            <p>This standard specifies safety rules for electrical appliances used at home and similar places. It ensures protection against electric shock, thermal hazards, mechanical injuries, and fire hazards.</p>
+                            <p><strong>Applicable Products:</strong></p>
+                            <ul class="list-disc pl-5 space-y-1">
+                               <span>Household electrical appliances, kitchen equipment, heating devices.</span>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+                        <h2 class="text-lg font-bold text-slate-900">Key Requirements</h2>
+                        <div class="space-y-3 text-sm text-slate-700">
+                            <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-start space-x-3">
+                                <i class="fa-solid fa-circle-check text-green-600 mt-1"></i>
+                                <div>
+                                    <span class="font-semibold block text-slate-900">Protection Against Access to Live Parts</span>
+                                    <p class="text-slate-600 text-xs mt-0.5">Appliances must be designed so that live parts cannot be touched accidentally.</p>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-start space-x-3">
+                                <i class="fa-solid fa-circle-check text-green-600 mt-1"></i>
+                                <div>
+                                    <span class="font-semibold block text-slate-900">Heating & Thermal Insulation</span>
+                                    <p class="text-slate-600 text-xs mt-0.5">Surface temperatures must not exceed specified safety limits under normal operating conditions.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+                        <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider text-slate-500">Metadata</h3>
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between border-b pb-2">
+                                <span class="text-slate-500">Publication Date</span>
+                                <span class="font-semibold text-slate-800">01 Jan 2024</span>
+                            </div>
+                            <div class="flex justify-between border-b pb-2">
+                                <span class="text-slate-500">Current Status</span>
+                                <span class="font-semibold text-green-600">Active</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-500">Related Standards</span>
+                                <span class="font-semibold text-blue-600">IS 302-2-6</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: COMPLIANCE CHECKER RESULT -->
+        <section id="view-compliance" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-slate-900">Compliance Checker Result</h1>
+                <p class="text-sm text-slate-500">Automated assessment summary for your submitted product specifications.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center space-y-4">
+                    <div class="relative w-36 h-36 flex items-center justify-center rounded-full bg-amber-50 border-8 border-amber-400">
+                        <div class="text-center">
+                            <span class="text-3xl font-extrabold text-slate-900">78%</span>
+                            <span class="block text-xs font-bold text-amber-700 uppercase tracking-wider">Compliant</span>
+                        </div>
+                    </div>
+                    <div class="space-y-1">
+                        <h2 class="font-bold text-slate-800">Compliance Score</h2>
+                        <p class="text-xs text-amber-600 font-semibold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Action Required on 2 items</p>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 space-y-4">
+                    <h2 class="font-bold text-slate-900 text-lg">Requirement Checklist</h2>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-circle-check text-green-600"></i>
+                                <span class="font-medium text-slate-800">Safety Regulations</span>
+                            </div>
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">Passed</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-circle-check text-green-600"></i>
+                                <span class="font-medium text-slate-800">Marking & Labeling</span>
+                            </div>
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-semibold">Passed</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                                <span class="font-medium text-slate-800">Thermal Insulation Test Report</span>
+                            </div>
+                            <span class="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded font-semibold">Action Required</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200 text-sm">
+                            <div class="flex items-center space-x-3">
+                                <i class="fa-solid fa-circle-xmark text-red-600"></i>
+                                <span class="font-medium text-slate-800">Documentation Verification</span>
+                            </div>
+                            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded font-semibold">Missing</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 5: CHAT ASSISTANT -->
+        <section id="view-chat" class="view-section hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-[calc(100vh-4rem)] flex flex-col">
+            <div class="bg-white rounded-xl border border-slate-200 flex-grow flex flex-col shadow-sm overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold">
+                            <i class="fa-solid fa-robot text-sm"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-slate-900 text-sm">Ask BIS AI Assistant</h2>
+                            <p class="text-xs text-slate-500">Ask anything about Indian Standards or BIS Services.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-grow p-6 overflow-y-auto space-y-4 bg-slate-50/50">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold mt-1">AI</div>
+                        <div class="bg-white p-4 rounded-2xl border border-slate-200 text-sm text-slate-700 shadow-sm max-w-xl">
+                            Hello! I can help you understand Indian Standards, BIS certification, product requirements and compliance procedures. How can I assist you today?
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white border-t border-slate-200">
+                    <div class="flex items-center space-x-3">
+                        <input type="text" placeholder="Ask about standards, compliance, or certification..." class="flex-grow bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl font-semibold transition flex items-center space-x-2">
+                            <span>Send</span>
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Role Selection Modal -->
+    <div id="role-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-6 shadow-2xl border border-slate-200">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-bold text-slate-900">What brings you to BIS AI?</h2>
+                <button onclick="closeRoleModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-sm text-slate-500">Select your role to get a personalized experience.</p>
+            
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div onclick="selectRole('Manufacturer')" class="border border-slate-200 hover:border-blue-600 hover:bg-blue-50/50 p-4 rounded-xl text-center cursor-pointer transition">
+                    <i class="fa-solid fa-industry text-2xl text-blue-600 mb-2"></i>
+                    <h3 class="font-bold text-xs text-slate-800">Manufacturer</h3>
+                </div>
+                <div onclick="selectRole('Startup')" class="border border-slate-200 hover:border-blue-600 hover:bg-blue-50/50 p-4 rounded-xl text-center cursor-pointer transition">
+                    <i class="fa-solid fa-rocket text-2xl text-blue-600 mb-2"></i>
+                    <h3 class="font-bold text-xs text-slate-800">MSME / Startup</h3>
+                </div>
+                <div onclick="selectRole('Consumer')" class="border border-slate-200 hover:border-blue-600 hover:bg-blue-50/50 p-4 rounded-xl text-center cursor-pointer transition">
+                    <i class="fa-solid fa-user text-2xl text-blue-600 mb-2"></i>
+                    <h3 class="font-bold text-xs text-slate-800">Consumer</h3>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeRoleModal()" class="bg-blue-600 text-white text-sm font-semibold px-6 py-2.5 rounded-xl">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connected JavaScript File -->
+    <script src="app.js"></script>
+</body>
+</html>
