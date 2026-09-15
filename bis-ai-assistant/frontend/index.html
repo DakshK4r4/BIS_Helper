@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>BIS AI Assistant - Smart India Hackathon</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- SIDEBAR NAVIGATION -->
+    <aside class="sidebar">
+
+        <div class="sidebar-top">
+
+            <div class="app-logo">
+                <i class="fa-solid fa-shield-halved"></i>
+
+                <div>
+                    <h4>BIS AI Assistant</h4>
+                    <span>Understand Standards, Simplify Compliance.</span>
+                </div>
+            </div>
+
+            <div class="sidebar-action-btn"
+                 onclick="switchView('ai-chat')">
+
+                <i class="fa-solid fa-plus"></i>
+                New Chat
+
+            </div>
+
+            <ul class="nav-menu">
+
+                <li class="active"
+                    onclick="switchView('landing', this)">
+                    <i class="fa-solid fa-house"></i>
+                    Home
+                </li>
+
+                <li onclick="switchView('ai-chat', this)">
+                    <i class="fa-solid fa-robot"></i>
+                    AI Assistant
+                </li>
+
+                <li onclick="switchView('standards', this)">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    Standards Search
+                </li>
+
+                <li onclick="switchView('services', this)">
+                    <i class="fa-solid fa-layer-group"></i>
+                    BIS Services
+                </li>
+
+                <li onclick="switchView('compliance', this)">
+                    <i class="fa-solid fa-list-check"></i>
+                    Compliance Checker
+                </li>
+
+                <li onclick="switchView('document', this)">
+                    <i class="fa-solid fa-file-arrow-up"></i>
+                    Document Intelligence
+                </li>
+
+                <li onclick="switchView('consumer', this)">
+                    <i class="fa-solid fa-shield-check"></i>
+                    Certification Verification
+                </li>
+
+                <li onclick="switchView('dashboard', this)">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    Industry Dashboard
+                </li>
+
+                <li onclick="switchView('history', this)">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    History
+                </li>
+
+            </ul>
+
+        </div>
+
+        <div class="sidebar-footer">
+
+            <div class="badge-box">
+                <h5>A Safer Tomorrow</h5>
+                <p>Through Standards</p>
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN APP WRAPPER -->
+    <main class="main-wrapper">
+
+
+        <!-- TOP HEADER NAVBAR -->
+        <header class="top-header">
+
+            <div class="header-search">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input type="text"
+                       placeholder="Search standard, IS number, category or keyword...">
+
+            </div>
+
+
+            <div class="header-right">
+
+                <button class="lang-toggle-btn">
+                    <i class="fa-solid fa-globe"></i>
+                    English | हिंदी
+                </button>
+
+                <div class="notifications-icon">
+                    <i class="fa-regular fa-bell"></i>
+                </div>
+
+                <div class="user-profile-pill"
+                     onclick="switchView('dashboard')">
+
+                    <div class="avatar-circle">
+                        RK
+                    </div>
+
+                    <div class="user-meta">
+
+                        <h5>Raj Kumar</h5>
+
+                        <span>Student</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- VIEW 1: LANDING PAGE -->
+        <section id="landing"
+                 class="app-view active-view">
+
+            <div class="hero-card">
+
+                <div class="hero-content">
+
+                    <span class="pill-tag">
+                        <i class="fa-solid fa-bolt"></i>
+                        BIS AI Assistant
+                    </span>
+
+                    <h1>
+                        India's Intelligent Assistant for
+                        <span>Standards & BIS Services</span>
+                    </h1>
+
+                    <p>
+                        Find Indian Standards, understand compliance requirements,
+                        discover BIS services, and get trusted guidance through AI.
+                    </p>
+
+                    <div class="hero-actions">
+
+                        <button class="primary-btn"
+                                onclick="switchView('ai-chat')">
+
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            Ask BIS AI
+
+                        </button>
+
+                        <button class="secondary-btn"
+                                onclick="switchView('standards')">
+
+                            <i class="fa-solid fa-compass"></i>
+                            Explore Standards
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="hero-graphics">
+
+                    <div class="mini-floating-card">
+                        Safer Products
+                    </div>
+
+                    <div class="mini-floating-card">
+                        Stronger Industries
+                    </div>
+
+                    <div class="mini-floating-card">
+                        Empowered Consumers
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="stats-row">
+
+                <div class="stat-box">
+
+                    <i class="fa-solid fa-award"></i>
+
+                    <div>
+                        <h3>10,000+</h3>
+                        <span>Indian Standards</span>
+                    </div>
+
+                </div>
+
+
+                <div class="stat-box">
+
+                    <i class="fa-solid fa-layer-group"></i>
+
+                    <div>
+                        <h3>BIS Services</h3>
+                        <span>One Platform</span>
+                    </div>
+
+                </div>
+
+
+                <div class="stat-box">
+
+                    <i class="fa-solid fa-building-columns"></i>
+
+                    <div>
+                        <h3>Trusted</h3>
+                        <span>Government Inspired</span>
+                    </div>
+
+                </div>
+
+
+                <div class="stat-box">
+
+                    <i class="fa-solid fa-users"></i>
+
+                    <div>
+                        <h3>For Industries</h3>
+                        <span>& Consumers</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 2: AI ASSISTANT -->
+        <section id="ai-chat"
+                 class="app-view">
+
+            <div class="chat-container-card">
+
+                <div class="chat-header-banner">
+
+                    <h2>
+                        Ask anything about
+                        <span>Indian Standards</span>
+                    </h2>
+
+                    <p>
+                        Get accurate, reliable and easy-to-understand answers
+                        from our AI assistant
+                    </p>
+
+                </div>
+
+
+                <div class="chat-input-mega-box">
+
+                    <input type="text"
+                           id="aiQueryInput"
+                           placeholder="Ask about an Indian Standard, product certification, BIS license, hallmarking, testing or compliance...">
+
+
+                    <div class="chat-input-actions">
+
+                        <button>
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+
+                        <button>
+                            <i class="fa-solid fa-paperclip"></i>
+                        </button>
+
+                        <button class="submit-arrow"
+                                onclick="triggerAiChat()">
+
+                            <i class="fa-solid fa-arrow-right"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="suggestions-grid">
+
+                    <div class="suggestion-chip"
+                         onclick="quickQuery('Which BIS standard applies to my product?')">
+
+                        Which BIS standard applies to my product?
+
+                    </div>
+
+                    <div class="suggestion-chip"
+                         onclick="quickQuery('Explain IS 302 in simple language')">
+
+                        Explain IS 302 in simple language
+
+                    </div>
+
+                    <div class="suggestion-chip"
+                         onclick="quickQuery('How can I obtain BIS certification?')">
+
+                        How can I obtain BIS certification?
+
+                    </div>
+
+                    <div class="suggestion-chip"
+                         onclick="quickQuery('What are the requirements for electrical products?')">
+
+                        What are the requirements for electrical products?
+
+                    </div>
+
+                    <div class="suggestion-chip"
+                         onclick="quickQuery('Find testing laboratories near me')">
+
+                        Find testing laboratories near me
+
+                    </div>
+
+                    <div class="suggestion-chip"
+                         onclick="quickQuery('Which documents are required?')">
+
+                        Which documents are required?
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 3: AI RESPONSE -->
+        <section id="ai-response"
+                 class="app-view">
+
+            <div class="query-echo-bar">
+                Which BIS standard applies to LED street light?
+            </div>
+
+
+            <div class="answer-card-box">
+
+                <div class="answer-card-header">
+
+                    <div class="rec-badge-left">
+                        <i class="fa-solid fa-circle-check"></i>
+                        Recommended Standard
+                    </div>
+
+                    <div class="confidence-badge">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        Confidence: 92%
+                    </div>
+
+                </div>
+
+
+                <h2>IS 10322 : 2012</h2>
+
+                <p class="std-subtitle">
+                    LED Luminaires for General Lighting Purposes –
+                    Safety Requirements
+                </p>
+
+
+                <div class="tab-filters-row">
+
+                    <button class="filter-tab active">
+                        Overview
+                    </button>
+
+                    <button class="filter-tab">
+                        Requirements
+                    </button>
+
+                    <button class="filter-tab">
+                        Testing
+                    </button>
+
+                    <button class="filter-tab">
+                        Certification
+                    </button>
+
+                </div>
+
+
+                <p class="std-desc-text">
+
+                    This standard specifies the safety requirements
+                    for LED luminaires used in general lighting applications
+                    including street lighting.
+
+                </p>
+
+
+                <div class="card-action-bar">
+
+                    <button class="primary-btn">
+
+                        <i class="fa-regular fa-eye"></i>
+                        View Standard
+
+                    </button>
+
+
+                    <button class="secondary-btn">
+
+                        <i class="fa-solid fa-download"></i>
+                        Download Summary
+
+                    </button>
+
+
+                    <button class="outline-btn"
+                            onclick="switchView('compliance')">
+
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        Check Compliance
+
+                    </button>
+
+                </div>
+
+
+                <div class="sub-metrics-row">
+
+                    <div>
+                        <span>BIS Services</span>
+                        <strong>Product Certification</strong>
+                    </div>
+
+                    <div>
+                        <span>Required Documents</span>
+                        <strong>5 Documents</strong>
+                    </div>
+
+                    <div>
+                        <span>Compliance Checklist</span>
+                        <strong>8 Key Points</strong>
+                    </div>
+
+                    <div>
+                        <span>Source</span>
+                        <strong>BIS Official Document</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 4: STANDARDS SEARCH -->
+        <section id="standards"
+                 class="app-view">
+
+            <div class="page-title-box">
+
+                <h2>Find the Right Indian Standard</h2>
+
+                <p>
+                    Search by product, IS number, category or keyword
+                </p>
+
+            </div>
+
+
+            <div class="search-filter-toolbar">
+
+                <div class="main-search-input-wrap">
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <input type="text"
+                           placeholder="Search for product, IS number, category, or keyword...">
+
+                    <button class="search-submit-btn">
+
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+
+                <div class="filter-dropdowns">
+
+                    <select>
+                        <option>Product Category</option>
+                    </select>
+
+                    <select>
+                        <option>Industry</option>
+                    </select>
+
+                    <select>
+                        <option>Year</option>
+                    </select>
+
+                    <select>
+                        <option>Status</option>
+                    </select>
+
+                    <select>
+                        <option>Type</option>
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <div class="results-meta-bar">
+
+                <span>
+                    Results <b>(1,245 standards)</b>
+                </span>
+
+                <span class="sort-box">
+                    Sort by:
+                    <b>
+                        Relevance
+                        <i class="fa-solid fa-chevron-down"></i>
+                    </b>
+                </span>
+
+            </div>
+
+
+            <div class="standard-list-container">
+
+                <div class="standard-row-card"
+                     onclick="switchView('ai-response')">
+
+                    <div class="std-info-left">
+
+                        <h4>
+                            IS 10322 : 2012
+                        </h4>
+
+                        <p>
+                            LED Luminaires for General Lighting Purposes –
+                            Safety Requirements
+                        </p>
+
+                        <div class="tags-row">
+
+                            <span class="tag electrical">
+                                Electrical
+                            </span>
+
+                            <span class="tag active">
+                                Active
+                            </span>
+
+                            <span class="tag mandatory">
+                                Mandatory
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="text-link-btn">
+
+                        View Details
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+
+                <div class="standard-row-card">
+
+                    <div class="std-info-left">
+
+                        <h4>
+                            IS 302 (Part 1) : 2024
+                        </h4>
+
+                        <p>
+                            Safety of Household Electrical Appliances
+                        </p>
+
+                        <div class="tags-row">
+
+                            <span class="tag electrical">
+                                Electrical Appliances
+                            </span>
+
+                            <span class="tag active">
+                                Active
+                            </span>
+
+                            <span class="tag mandatory">
+                                Mandatory
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="text-link-btn">
+
+                        View Details
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+
+                <div class="standard-row-card">
+
+                    <div class="std-info-left">
+
+                        <h4>
+                            IS 456 : 2000
+                        </h4>
+
+                        <p>
+                            Plain and Reinforced Concrete –
+                            Code of Practice
+                        </p>
+
+                        <div class="tags-row">
+
+                            <span class="tag civil">
+                                Civil Engineering
+                            </span>
+
+                            <span class="tag active">
+                                Active
+                            </span>
+
+                            <span class="tag voluntary">
+                                Voluntary
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                    <button class="text-link-btn">
+
+                        View Details
+                        <i class="fa-solid fa-arrow-right"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 5: BIS SERVICES -->
+        <section id="services"
+                 class="app-view">
+
+            <div class="page-title-box">
+
+                <h2>BIS Services</h2>
+
+                <p>
+                    Explore all BIS services for industries and consumers
+                </p>
+
+            </div>
+
+
+            <div class="services-search-bar">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input type="text"
+                       placeholder="Search services...">
+
+            </div>
+
+
+            <div class="services-grid">
+
+                <div class="service-card">
+                    <i class="fa-solid fa-certificate"></i>
+                    <h4>Product Certification</h4>
+                    <p>Ensure product quality and safety</p>
+                    <span>
+                        Learn More
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+
+                <div class="service-card">
+                    <i class="fa-solid fa-gem"></i>
+                    <h4>Hallmarking</h4>
+                    <p>Trust in precious metals and jewellery</p>
+                    <span>
+                        Learn More
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+
+                <div class="service-card">
+                    <i class="fa-solid fa-flask"></i>
+                    <h4>Laboratory Recognition</h4>
+                    <p>Accredited testing laboratories</p>
+                    <span>
+                        Learn More
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+
+                <div class="service-card">
+                    <i class="fa-solid fa-file-signature"></i>
+                    <h4>BIS Registration</h4>
+                    <p>Register your establishment</p>
+                    <span>
+                        Learn More
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+
+                <div class="service-card">
+                    <i class="fa-solid fa-book-bookmark"></i>
+                    <h4>Standards</h4>
+                    <p>Access Indian Standards catalogue</p>
+                    <span>
+                        Learn More
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+
+                <div class="service-card">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <h4>Training</h4>
+                    <p>Build skills and knowledge</p>
+                    <span>
+                        Learn More
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </span>
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 6: COMPLIANCE CHECKER -->
+        <section id="compliance"
+                 class="app-view">
+
+            <div class="stepper-header">
+
+                <div class="step-item completed">
+                    <span>1</span>
+                    Product
+                </div>
+
+                <div class="step-line"></div>
+
+                <div class="step-item active">
+                    <span>2</span>
+                    Details
+                </div>
+
+                <div class="step-line"></div>
+
+                <div class="step-item">
+                    <span>3</span>
+                    Standard
+                </div>
+
+                <div class="step-line"></div>
+
+                <div class="step-item">
+                    <span>4</span>
+                    Documents
+                </div>
+
+                <div class="step-line"></div>
+
+                <div class="step-item">
+                    <span>5</span>
+                    Analysis
+                </div>
+
+            </div>
+
+
+            <div class="stepper-card-body">
+
+                <div class="form-group-box">
+
+                    <h3>
+                        Product Information
+                    </h3>
+
+                    <p>
+                        Tell the AI about the product you want to check.
+                    </p>
+
+
+                    <label>
+                        Product Name
+                    </label>
+
+                    <input
+                        id="complianceProduct"
+                        class="wide-input"
+                        type="text"
+                        placeholder="Example: LED Street Light"
+                    >
+
+
+                    <label>
+                        Applicable BIS Standard
+                    </label>
+
+                    <input
+                        id="complianceStandard"
+                        class="wide-input"
+                        type="text"
+                        placeholder="Example: IS 10322 : 2012"
+                    >
+
+                </div>
+
+
+                <div class="stepper-buttons-row">
+
+                    <button
+                        class="secondary-btn"
+                        onclick="switchView('ai-chat')"
+                    >
+
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Back to AI
+
+                    </button>
+
+
+                    <button
+                        class="primary-btn"
+                        onclick="runComplianceCheck()"
+                    >
+
+                        Analyze Compliance
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 7: DOCUMENT INTELLIGENCE -->
+        <section id="document"
+                 class="app-view">
+
+            <div class="doc-upload-container">
+
+                <h2>
+                    Upload BIS Document
+                </h2>
+
+
+                <div class="dropzone-box"
+                     id="documentDropzone">
+
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+
+                    <h4>
+                        Drag & drop your BIS document here
+                    </h4>
+
+                    <span>
+                        or click to browse
+                    </span>
+
+                    <small>
+                        PDF, DOCX • Maximum 20MB
+                    </small>
+
+                </div>
+
+
+                <div class="upload-footer-row">
+
+                    <div class="recent-tag">
+
+                        <i class="fa-regular fa-file-pdf"></i>
+
+                        IS_10322_2012.pdf
+
+                        <span>
+                            Uploaded 2 mins ago
+                        </span>
+
+                    </div>
+
+                    
+
+                    <!-- FIXED SUMMARIZE BUTTON -->
+                    <button
+    type="button"
+    class="primary-btn"
+    onclick="event.preventDefault(); event.stopPropagation(); summarizeDocument()"
+>
+    Summarize
+    <i class="fa-solid fa-arrow-right"></i>
+</button>
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 8: CONSUMER -->
+        <section id="consumer"
+                 class="app-view">
+
+            <div class="verification-card">
+
+                <div class="ver-header">
+
+                    <i class="fa-solid fa-shield-check"></i>
+
+                    Verify Before You Buy
+
+                    <span>
+                        Check authenticity of BIS certified products
+                    </span>
+
+                </div>
+
+
+                <div class="ver-tabs">
+
+                    <button class="active">
+                        Verify License
+                    </button>
+
+                    <button>
+                        Verify Hallmark
+                    </button>
+
+                    <button>
+                        Report Complaint
+                    </button>
+
+                </div>
+
+
+                <label>
+                    Enter License / Registration Number
+                </label>
+
+
+                <div class="ver-input-row">
+
+                    <input type="text"
+                           value="CM/L-1234567">
+
+                    <button class="primary-btn">
+                        Verify
+                    </button>
+
+                </div>
+
+
+                <div class="verified-success-box">
+
+                    <i class="fa-solid fa-circle-check"></i>
+
+                    <div>
+
+                        <h4>
+                            Verified
+                        </h4>
+
+                        <p>
+                            This BIS license is active and valid.
+                        </p>
+
+
+                        <div class="ver-details-grid">
+
+                            <span>
+                                License Number:
+                                <b>CM/L-1234567</b>
+                            </span>
+
+                            <span>
+                                Product:
+                                <b>LED Street Light</b>
+                            </span>
+
+                            <span>
+                                Manufacturer:
+                                <b>ABC Electronics Pvt. Ltd.</b>
+                            </span>
+
+                            <span>
+                                Validity:
+                                <b>12 Jan 2024 – 11 Jan 2026</b>
+                            </span>
+
+                            <span>
+                                Applicable Standard:
+                                <b>IS 10322 : 2012</b>
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 9: INDUSTRY DASHBOARD -->
+        <section id="dashboard"
+                 class="app-view">
+
+            <div class="dashboard-top-greet">
+
+                <h2>
+                    Welcome back, Raj Kumar
+                </h2>
+
+                <p>
+                    Manage your compliance journey
+                </p>
+
+            </div>
+
+
+            <div class="dash-metrics-grid">
+
+                <div class="dash-card">
+
+                    <h3 id="dashboard-products">
+                        0
+                    </h3>
+
+                    <span>
+                        My Products
+                    </span>
+
+                </div>
+
+
+                <div class="dash-card">
+
+                    <h3 id="dashboard-certificates">
+                        0
+                    </h3>
+
+                    <span>
+                        Certificates
+                    </span>
+
+                </div>
+
+
+                <div class="dash-card">
+
+                    <h3 id="dashboard-score"
+                        class="green">
+
+                        0%
+
+                    </h3>
+
+                    <span>
+                        Compliance
+                    </span>
+
+                </div>
+
+
+                <div class="dash-card">
+
+                    <h3 id="dashboard-renewals"
+                        class="orange">
+
+                        0
+
+                    </h3>
+
+                    <span>
+                        Renewals Due
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="dash-charts-row">
+
+                <div class="chart-box-wide">
+
+                    <h4>
+
+                        Compliance Status
+
+                        <span class="right-label">
+
+                            Last 6 Months
+
+                            <i class="fa-solid fa-chevron-down"></i>
+
+                        </span>
+
+                    </h4>
+
+
+                    <div class="bar-visualizer-mock">
+
+                        <div class="bar"
+                             style="height: 60%">
+
+                            <span>Jan</span>
+
+                        </div>
+
+                        <div class="bar"
+                             style="height: 70%">
+
+                            <span>Feb</span>
+
+                        </div>
+
+                        <div class="bar"
+                             style="height: 65%">
+
+                            <span>Mar</span>
+
+                        </div>
+
+                        <div class="bar"
+                             style="height: 85%">
+
+                            <span>Apr</span>
+
+                        </div>
+
+                        <div class="bar"
+                             style="height: 80%">
+
+                            <span>May</span>
+
+                        </div>
+
+                        <div class="bar"
+                             style="height: 95%">
+
+                            <span>Jun</span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="chart-box-narrow">
+
+                    <h4>
+                        Standards by Category
+                    </h4>
+
+
+                    <div class="donut-legend">
+
+                        <div>
+                            <span class="dot elec"></span>
+                            Electrical 40%
+                        </div>
+
+                        <div>
+                            <span class="dot mech"></span>
+                            Mechanical 25%
+                        </div>
+
+                        <div>
+                            <span class="dot civ"></span>
+                            Civil 15%
+                        </div>
+
+                        <div>
+                            <span class="dot chem"></span>
+                            Chemical 10%
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- VIEW 10: HISTORY / ABOUT -->
+        <section id="history"
+                 class="app-view">
+
+            <div class="about-card-container">
+
+                <h2>
+                    About BIS AI Assistant
+                </h2>
+
+                <p>
+
+                    Built for
+                    <b>Smart India Hackathon 2026</b>.
+
+                    An AI-powered platform to simplify access to
+                    Indian Standards and BIS services for industries
+                    and consumers.
+
+                </p>
+
+
+                <div class="pill-badge-row">
+
+                    <span>
+                        <i class="fa-solid fa-lightbulb"></i>
+                        Innovation through AI
+                    </span>
+
+                    <span>
+                        <i class="fa-solid fa-universal-access"></i>
+                        Accessible for Everyone
+                    </span>
+
+                    <span>
+                        <i class="fa-solid fa-shield"></i>
+                        Trusted Information
+                    </span>
+
+                    <span>
+                        <i class="fa-solid fa-flag"></i>
+                        Stronger India
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+    </main>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>

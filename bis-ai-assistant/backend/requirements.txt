@@ -1,0 +1,7 @@
+Flask
+Flask-CORS
+python-dotenv
+Werkzeug
+pypdf
+python-docx
+PyPDF2
