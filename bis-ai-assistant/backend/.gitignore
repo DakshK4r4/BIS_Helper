@@ -1,0 +1,17 @@
+# Backend environment variables
+.env
+*.env
+
+# SQLite Databases
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+
+# Uploaded documents
+uploads/*
+!uploads/.gitkeep
+
+# Python cache
+__pycache__/
+*.py[cod]
