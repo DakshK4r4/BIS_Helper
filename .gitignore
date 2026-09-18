@@ -1,0 +1,28 @@
+# Environment variables
+.env
+*.env
+bis-ai-assistant/backend/.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded test documents
+bis-ai-assistant/backend/uploads/*
+!bis-ai-assistant/backend/uploads/.gitkeep
+
+# IDE and OS
+.DS_Store
+Thumbs.db
+.idea/

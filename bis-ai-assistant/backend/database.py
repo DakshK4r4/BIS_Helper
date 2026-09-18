@@ -1,5 +1,7 @@
 import sqlite3
 import os
+import json
+import uuid
 from datetime import datetime
 
 
@@ -22,6 +24,25 @@ def get_db():
     conn.row_factory = sqlite3.Row
 
     return conn
+
+
+# ============================================================
+# DYNAMIC SCHEMA MIGRATION HELPER
+# ============================================================
+
+def ensure_columns(cursor, table_name, column_defs):
+    """
+    Ensure required columns exist in SQLite table without breaking existing data.
+    """
+    try:
+        cursor.execute(f"PRAGMA table_info({table_name});")
+        existing_cols = {row[1].lower() for row in cursor.fetchall()}
+        for col_name, col_def in column_defs.items():
+            if col_name.lower() not in existing_cols:
+                cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def};")
+    except Exception as e:
+        print(f"Migration check notice for {table_name}: {e}")
+
 
 
 # ============================================================
@@ -138,105 +159,283 @@ def init_db():
     """)
 
     # ========================================================
-    # DEMO STANDARDS
+    # USERS TABLE
+    # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            email TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            picture TEXT,
+            role TEXT DEFAULT 'Citizen / Industry User',
+            auth_provider TEXT DEFAULT 'google',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ========================================================
+    # USER SESSIONS TABLE
+    # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_sessions (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP
+        )
+    """)
+
+    # ========================================================
+    # USER ACTION HISTORY TABLE
+    # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS user_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            action_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            meta_json TEXT,
+            status TEXT DEFAULT 'SUCCESS',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ========================================================
+    # NOTIFICATIONS TABLE
+    # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            type TEXT DEFAULT 'info',
+            is_read INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ========================================================
+    # COMPLAINTS TABLE
+    # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS complaints (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            complaint_id TEXT UNIQUE NOT NULL,
+            user_id TEXT,
+            name TEXT NOT NULL,
+            contact TEXT NOT NULL,
+            category TEXT NOT NULL,
+            ref_number TEXT,
+            subject TEXT NOT NULL,
+            description TEXT NOT NULL,
+            status TEXT DEFAULT 'SUBMITTED',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # ========================================================
+    # HALLMARK VERIFICATION REGISTRY TABLE
+    # ========================================================
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hallmarks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            huid TEXT UNIQUE NOT NULL,
+            article_type TEXT NOT NULL,
+            purity TEXT NOT NULL,
+            jeweler_name TEXT NOT NULL,
+            ahc_name TEXT NOT NULL,
+            hallmark_date TEXT NOT NULL,
+            status TEXT DEFAULT 'VERIFIED'
+        )
+    """)
+
+    # Dynamic migrations to ensure backward compatibility
+    ensure_columns(cursor, 'documents', {
+        'file_type': 'TEXT',
+        'extracted_text': 'TEXT',
+        'summary': 'TEXT',
+        'compliance_score': 'INTEGER',
+        'ocr_used': 'INTEGER DEFAULT 0',
+        'status': "TEXT DEFAULT 'PROCESSED'",
+        'uploaded_at': 'TEXT'
+    })
+
+    ensure_columns(cursor, 'user_history', {
+        'user_id': 'TEXT',
+        'action_type': 'TEXT',
+        'title': 'TEXT',
+        'description': 'TEXT',
+        'meta_json': 'TEXT',
+        'status': "TEXT DEFAULT 'SUCCESS'"
+    })
+
+    conn.commit()
+
+    # ========================================================
+    # SEED DEMO USER (FOR EVALUATION / DEV)
+    # ========================================================
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO users (id, email, name, picture, role, auth_provider)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (
+        'usr_officer_demo_01',
+        'officer@bis.gov.in',
+        'Raj Kumar',
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        'BIS Quality Assurance Officer',
+        'demo'
+    ))
+
+    # ========================================================
+    # RICH BIS STANDARDS SEED DATA
     # ========================================================
 
     standards = [
-
-        (
-            "IS 10322 : 2012",
-            "LED Luminaires for General Lighting Purposes – Safety Requirements",
-            "Safety requirements for LED luminaires used in general lighting applications.",
-            "Electrical",
-            "Lighting",
-            2012,
-            "Active",
-            "Product Certification",
-            "LED,luminaire,street light,lighting"
-        ),
-
-        (
-            "IS 302 (Part 1) : 2024",
-            "Safety of Household Electrical Appliances",
-            "General safety requirements for household electrical appliances.",
-            "Electrical Appliances",
-            "Consumer Electronics",
-            2024,
-            "Active",
-            "Product Certification",
-            "electrical,appliance,household"
-        ),
-
-        (
-            "IS 456 : 2000",
-            "Plain and Reinforced Concrete – Code of Practice",
-            "Code of practice for plain and reinforced concrete.",
-            "Civil",
-            "Construction",
-            2000,
-            "Active",
-            "Voluntary",
-            "concrete,civil,construction"
-        )
+        ("IS 10322 : 2012", "LED Luminaires for General Lighting Purposes – Safety Requirements", "Safety requirements for LED luminaires used in general lighting applications.", "Electrical", "Lighting", 2012, "Active", "Product Certification", "LED,luminaire,street light,lighting"),
+        ("IS 302 (Part 1) : 2024", "Safety of Household Electrical Appliances", "General safety requirements for household and similar electrical appliances.", "Electrical Appliances", "Consumer Electronics", 2024, "Active", "Product Certification", "electrical,appliance,household,safety"),
+        ("IS 456 : 2000", "Plain and Reinforced Concrete – Code of Practice", "Code of practice for plain and reinforced concrete structures.", "Civil", "Construction", 2000, "Active", "Voluntary", "concrete,civil,construction,cement"),
+        ("IS 1293 : 2019", "Plugs and Socket-Outlets for Domestic and Similar Purposes", "Requirements for plugs and socket-outlets rated up to 250V and 16A.", "Electrical", "Consumer Goods", 2019, "Active", "Product Certification", "plug,socket,electrical,outlet,switch"),
+        ("IS 16046 (Part 1) : 2018", "Secondary Cells and Batteries Containing Alkaline / Non-Acid Electrolytes", "Safety requirements for secondary lithium cells and batteries in portable applications.", "Electronics", "Consumer Electronics", 2018, "Active", "Compulsory Registration", "battery,lithium,cell,electronics,mobile,safety"),
+        ("IS 15885 (Part 2/Sec 13) : 2012", "Lamp Controlgear for LED Modules – Particular Requirements", "Safety and performance requirements for AC/DC electronic controlgear for LED modules.", "Electrical", "Lighting", 2012, "Active", "Product Certification", "led,driver,controlgear,ballast,power supply"),
+        ("IS 14543 : 2024", "Packaged Drinking Water (Other than Natural Mineral Water)", "Specification for packaged drinking water including microbiological and chemical limits.", "Food & Agriculture", "Food & Beverages", 2024, "Active", "Product Certification", "water,drinking water,packaged water,bottle,beverage"),
+        ("IS 694 : 2010", "Polyvinyl Chloride (PVC) Insulated Cables for Working Voltages up to 1100V", "Requirements for single core and multicore PVC insulated electrical cables.", "Electrical", "Power & Transmission", 2010, "Active", "Product Certification", "wire,cable,pvc,copper,transmission,electrical"),
+        ("IS 2062 : 2011", "Hot Rolled Medium and High Tensile Structural Steel", "Standard for structural quality hot rolled steel plates, sections, and flats.", "Mechanical", "Manufacturing", 2011, "Active", "Product Certification", "steel,structural,hot rolled,plates,manufacturing"),
+        ("IS 15298 (Part 2) : 2016", "Personal Protective Equipment – Safety Footwear", "Safety requirements and test methods for occupational safety footwear.", "Textiles", "Manufacturing & Safety", 2016, "Active", "Product Certification", "footwear,safety shoes,ppe,protective,boots"),
+        ("IS 1786 : 2008", "High Strength Deformed Steel Bars for Concrete Reinforcement", "Technical requirements for thermo-mechanically treated (TMT) steel reinforcement bars.", "Civil", "Construction", 2008, "Active", "Product Certification", "tmt,rebar,steel,bars,concrete,construction"),
+        ("IS 73 : 2013", "Paving Bitumen – Specification", "Grades and specifications for paving grade bitumen used in road and highway construction.", "Chemical", "Infrastructure & Roads", 2013, "Active", "Voluntary", "bitumen,asphalt,roads,highway,chemical,paving"),
+        ("IS 16102 (Part 1) : 2012", "Self-Ballasted LED Lamps for General Lighting Services – Safety", "Safety requirements for self-ballasted LED lamps for domestic and commercial lighting.", "Electrical", "Lighting", 2012, "Active", "Compulsory Registration", "led bulb,lamp,self ballasted,lighting,energy"),
+        ("IS 13252 (Part 1) : 2010", "Information Technology Equipment – Safety – General Requirements", "Essential safety requirements for IT equipment, computers, chargers and power supplies.", "Electronics", "Information Technology", 2010, "Active", "Compulsory Registration", "it equipment,computer,laptop,charger,safety,adapter"),
+        ("IS 269 : 2015", "Ordinary Portland Cement – Specification", "Physical and chemical requirements for 33, 43, and 53 grade Ordinary Portland Cement.", "Civil", "Construction", 2015, "Active", "Product Certification", "cement,portland cement,opc,concrete,civil")
     ]
 
-    for standard in standards:
-
+    for std in standards:
         cursor.execute("""
-            INSERT OR IGNORE INTO standards
-            (
-                is_number,
-                title,
-                description,
-                category,
-                industry,
-                year,
-                status,
-                certification,
-                keywords
-            )
+            INSERT OR REPLACE INTO standards
+            (is_number, title, description, category, industry, year, status, certification, keywords)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, standard)
+        """, std)
 
     # ========================================================
-    # DEMO LICENSE
+    # SEED LICENSES
     # ========================================================
 
     cursor.execute("""
         INSERT OR IGNORE INTO licenses
-        (
-            license_number,
-            product,
-            manufacturer,
-            standard,
-            validity_from,
-            validity_to,
-            status
-        )
+        (license_number, product, manufacturer, standard, validity_from, validity_to, status)
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, (
-
-        "CM/L-1234567",
-
-        "LED Street Light",
-
-        "ABC Electronics Pvt. Ltd.",
-
-        "IS 10322 : 2012",
-
-        "12 Jan 2024",
-
-        "11 Jan 2027",
-
-        "Active"
+        'CM/L-1234567',
+        'LED Street Light',
+        'ABC Electronics Pvt. Ltd.',
+        'IS 10322 : 2012',
+        '12 Jan 2024',
+        '11 Jan 2027',
+        'Active'
     ))
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO licenses
+        (license_number, product, manufacturer, standard, validity_from, validity_to, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        'CM/L-7654321',
+        'Household Electric Iron',
+        'HomeCare Appliances Ltd.',
+        'IS 302 (Part 1) : 2024',
+        '01 Mar 2023',
+        '28 Feb 2026',
+        'Active'
+    ))
+
+    # ========================================================
+    # SEED HALLMARK REGISTRY RECORDS
+    # ========================================================
+
+    hallmarks = [
+        ('AB1234', 'Gold Ring 22K (916)', '22K (916 Purity)', 'Tanishq Jewellers, New Delhi', 'Shree Ganesh Assaying & Hallmarking Center (AHC-0104)', '14 Aug 2024'),
+        ('MN5678', 'Gold Bangle 18K (750)', '18K (750 Purity)', 'Kalyan Jewellers, Mumbai', 'National Bullion Assaying Center (AHC-0211)', '02 Sep 2024'),
+        ('KL9012', 'Silver Coin 999 Fine', '99.9% Fine Silver', 'MMTC-PAMP India Pvt. Ltd.', 'MMTC Assaying Center, Gurugram (AHC-0005)', '19 Jan 2025'),
+        ('HG3421', 'Gold Necklace 22K (916)', '22K (916 Purity)', 'Malabar Gold & Diamonds, Bengaluru', 'Southern Hallmark Assayers (AHC-0322)', '10 Nov 2024')
+    ]
+
+    for h in hallmarks:
+        cursor.execute("""
+            INSERT OR REPLACE INTO hallmarks
+            (huid, article_type, purity, jeweler_name, ahc_name, hallmark_date, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'VERIFIED')
+        """, h)
 
     conn.commit()
     conn.close()
 
 
 # ============================================================
-# SAVE DOCUMENT
+# HELPER FUNCTIONS FOR USER ISOLATION, HISTORY & NOTIFICATIONS
+# ============================================================
+
+def add_user_history(user_id, action_type, title, description, meta=None, status='SUCCESS'):
+    """Record an action specifically for the authenticated user."""
+    conn = get_db()
+    meta_json = json.dumps(meta) if meta else None
+    conn.execute("""
+        INSERT INTO user_history (user_id, action_type, title, description, meta_json, status)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user_id, action_type, title, description, meta_json, status))
+    # Also record into global history for dashboard activity
+    conn.execute("""
+        INSERT INTO history (query, response)
+        VALUES (?, ?)
+    """, (f"{title}: {description}", meta_json or ""))
+    conn.commit()
+    conn.close()
+
+def add_notification(user_id, title, message, notif_type='info'):
+    """Create a user-isolated notification."""
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO notifications (user_id, title, message, type)
+        VALUES (?, ?, ?, ?)
+    """, (user_id, title, message, notif_type))
+    conn.commit()
+    conn.close()
+
+def create_session(user_id):
+    """Generate a cryptographically secure session token."""
+    token = 'bis_sess_' + str(uuid.uuid4()).replace('-', '')
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO user_sessions (token, user_id)
+        VALUES (?, ?)
+    """, (token, user_id))
+    conn.commit()
+    conn.close()
+    return token
+
+def get_user_by_session(token):
+    """Retrieve user dictionary using session token."""
+    if not token:
+        return None
+    conn = get_db()
+    row = conn.execute("""
+        SELECT u.* FROM users u
+        JOIN user_sessions s ON u.id = s.user_id
+        WHERE s.token = ?
+    """, (token,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+# ============================================================
+# DOCUMENT HELPERS
 # ============================================================
 
 def save_document(
@@ -248,9 +447,7 @@ def save_document(
     summary=None,
     compliance_score=None
 ):
-
     conn = get_db()
-
     cursor = conn.execute("""
         INSERT INTO documents
         (
@@ -266,42 +463,23 @@ def save_document(
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
-
         filename,
-
         filepath,
-
         file_type,
-
         extracted_text,
-
         summary,
-
         compliance_score,
-
         1 if ocr_used else 0,
-
         "PROCESSED",
-
         datetime.now().isoformat()
     ))
-
     document_id = cursor.lastrowid
-
     conn.commit()
     conn.close()
-
     return document_id
 
-
-# ============================================================
-# GET ALL DOCUMENTS
-# ============================================================
-
 def get_documents():
-
     conn = get_db()
-
     documents = conn.execute("""
         SELECT
             id,
@@ -316,217 +494,23 @@ def get_documents():
         FROM documents
         ORDER BY id DESC
     """).fetchall()
-
     conn.close()
-
     return [dict(document) for document in documents]
 
-
-# ============================================================
-# GET ONE DOCUMENT
-# ============================================================
-
 def get_document(document_id):
-
     conn = get_db()
-
     document = conn.execute("""
         SELECT *
         FROM documents
         WHERE id = ?
     """, (document_id,)).fetchone()
-
     conn.close()
-
     if document:
         return dict(document)
-
     return None
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 if __name__ == "__main__":
-
     init_db()
-
-    print("Database initialized successfully.")
-
-    print("Database location:")
-    print(DB_PATH)
-
-
-# import sqlite3
-# import os
-
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# DB_PATH = os.path.join(BASE_DIR, "data", "bis.db")
-
-
-# def get_db():
-#     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-#     conn = sqlite3.connect(DB_PATH)
-#     conn.row_factory = sqlite3.Row
-#     return conn
-
-
-# def init_db():
-
-#     conn = get_db()
-#     cursor = conn.cursor()
-
-#     # Standards
-#     cursor.execute("""
-#         CREATE TABLE IF NOT EXISTS standards (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             is_number TEXT UNIQUE NOT NULL,
-#             title TEXT NOT NULL,
-#             description TEXT,
-#             category TEXT,
-#             industry TEXT,
-#             year INTEGER,
-#             status TEXT DEFAULT 'Active',
-#             certification TEXT,
-#             keywords TEXT
-#         )
-#     """)
-
-#     # BIS licenses
-#     cursor.execute("""
-#         CREATE TABLE IF NOT EXISTS licenses (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             license_number TEXT UNIQUE NOT NULL,
-#             product TEXT,
-#             manufacturer TEXT,
-#             standard TEXT,
-#             validity_from TEXT,
-#             validity_to TEXT,
-#             status TEXT DEFAULT 'Active'
-#         )
-#     """)
-
-#     # Uploaded documents
-#     cursor.execute("""
-#         CREATE TABLE IF NOT EXISTS documents (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             filename TEXT,
-#             filepath TEXT,
-#             extracted_text TEXT,
-#             summary TEXT,
-#             compliance_score INTEGER,
-#             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-#         )
-#     """)
-
-#     # Queries/history
-#     cursor.execute("""
-#         CREATE TABLE IF NOT EXISTS history (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             query TEXT,
-#             response TEXT,
-#             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-#         )
-#     """)
-
-#     # Compliance reports
-#     cursor.execute("""
-#         CREATE TABLE IF NOT EXISTS compliance_reports (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             product TEXT,
-#             standard TEXT,
-#             score INTEGER,
-#             risk TEXT,
-#             result TEXT,
-#             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-#         )
-#     """)
-
-#     conn.commit()
-
-#     # Demo standards
-#     standards = [
-#         (
-#             "IS 10322 : 2012",
-#             "LED Luminaires for General Lighting Purposes – Safety Requirements",
-#             "Safety requirements for LED luminaires used in general lighting applications.",
-#             "Electrical",
-#             "Lighting",
-#             2012,
-#             "Active",
-#             "Product Certification",
-#             "LED,luminaire,street light,lighting"
-#         ),
-#         (
-#             "IS 302 (Part 1) : 2024",
-#             "Safety of Household Electrical Appliances",
-#             "General safety requirements for household electrical appliances.",
-#             "Electrical Appliances",
-#             "Consumer Electronics",
-#             2024,
-#             "Active",
-#             "Product Certification",
-#             "electrical,appliance,household"
-#         ),
-#         (
-#             "IS 456 : 2000",
-#             "Plain and Reinforced Concrete – Code of Practice",
-#             "Code of practice for plain and reinforced concrete.",
-#             "Civil",
-#             "Construction",
-#             2000,
-#             "Active",
-#             "Voluntary",
-#             "concrete,civil,construction"
-#         )
-#     ]
-
-#     for standard in standards:
-#         cursor.execute("""
-#             INSERT OR IGNORE INTO standards
-#             (
-#                 is_number,
-#                 title,
-#                 description,
-#                 category,
-#                 industry,
-#                 year,
-#                 status,
-#                 certification,
-#                 keywords
-#             )
-#             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-#         """, standard)
-
-#     # Demo verification record
-#     cursor.execute("""
-#         INSERT OR IGNORE INTO licenses
-#         (
-#             license_number,
-#             product,
-#             manufacturer,
-#             standard,
-#             validity_from,
-#             validity_to,
-#             status
-#         )
-#         VALUES (?, ?, ?, ?, ?, ?, ?)
-#     """, (
-#         "CM/L-1234567",
-#         "LED Street Light",
-#         "ABC Electronics Pvt. Ltd.",
-#         "IS 10322 : 2012",
-#         "12 Jan 2024",
-#         "11 Jan 2027",
-#         "Active"
-#     ))
-
-#     conn.commit()
-#     conn.close()
-
-
-# if __name__ == "__main__":
-#     init_db()
-#     print("Database initialized.")
+    print("Database initialized successfully with complete tables, schema migrations, and rich BIS standards.")
+    print("Database location:", DB_PATH)

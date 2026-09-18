@@ -12,6 +12,8 @@
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <link rel="stylesheet" href="style.css">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -109,40 +111,83 @@
         <!-- TOP HEADER NAVBAR -->
         <header class="top-header">
 
-            <div class="header-search">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                <input type="text"
-                       placeholder="Search standard, IS number, category or keyword...">
-
+            <div class="header-left">
+                <h3 id="topHeaderTitle">Home</h3>
+                <span id="topHeaderSubtitle">Understand Standards, Simplify Compliance</span>
             </div>
-
 
             <div class="header-right">
 
-                <button class="lang-toggle-btn">
+                <!-- Language Toggle Button -->
+                <button type="button" class="lang-toggle-btn" id="langToggleBtn" onclick="toggleLanguage()">
                     <i class="fa-solid fa-globe"></i>
-                    English | हिंदी
+                    <span id="langBtnText">English | हिंदी</span>
                 </button>
 
-                <div class="notifications-icon">
-                    <i class="fa-regular fa-bell"></i>
+                <!-- Dark / Light Theme Button -->
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                    <i class="fa-solid fa-moon" id="themeToggleIcon"></i>
+                </button>
+
+                <!-- Notification Bell & Dropdown -->
+                <div class="notifications-icon-wrap" id="notifBtnWrap">
+                    <button type="button" class="notif-btn" id="notifBtn" onclick="toggleNotifications(event)" title="Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    </button>
+
+                    <div class="notif-dropdown-panel" id="notifDropdown" style="display: none;" onclick="event.stopPropagation()">
+                        <div class="notif-header">
+                            <div class="notif-title">
+                                <i class="fa-solid fa-bell"></i>
+                                <span>Notifications</span>
+                            </div>
+                            <button type="button" class="notif-mark-read-btn" onclick="markAllNotificationsRead()">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notifList">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
                 </div>
 
-                <div class="user-profile-pill"
-                     onclick="switchView('dashboard')">
+                <!-- User Profile Pill & Dropdown -->
+                <div class="user-profile-pill" id="userProfilePill" onclick="toggleUserMenu(event)">
 
-                    <div class="avatar-circle">
+                    <div class="avatar-circle" id="userAvatar">
                         RK
                     </div>
 
                     <div class="user-meta">
+                        <h5 id="userName">Raj Kumar</h5>
+                        <span id="userRole">BIS Quality Officer</span>
+                    </div>
 
-                        <h5>Raj Kumar</h5>
+                    <i class="fa-solid fa-chevron-down pill-chevron"></i>
 
-                        <span>Student</span>
-
+                    <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none;" onclick="event.stopPropagation()">
+                        <div class="dropdown-user-header">
+                            <strong id="menuUserName">Raj Kumar</strong>
+                            <span id="menuUserEmail">officer@bis.gov.in</span>
+                            <div class="auth-provider-badge" id="menuUserRole">BIS Officer (Demo)</div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <button type="button" class="dropdown-item" onclick="switchView('history'); closeAllDropdowns();">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            My Activity History
+                        </button>
+                        <button type="button" class="dropdown-item" onclick="switchView('dashboard'); closeAllDropdowns();">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            Industry Dashboard
+                        </button>
+                        <button type="button" class="dropdown-item" onclick="openLoginModal(); closeAllDropdowns();">
+                            <i class="fa-solid fa-user-gear"></i>
+                            Switch Account / Google Sign-In
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <button type="button" class="dropdown-item text-danger" onclick="logoutUser()">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            Sign Out
+                        </button>
                     </div>
 
                 </div>
@@ -294,25 +339,34 @@
                 </div>
 
 
+                <!-- ATTACHMENT CHIP -->
+                <div id="aiAttachmentChip" class="ai-attachment-chip" style="display: none;">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span id="aiAttachmentName">document.pdf</span>
+                    <button type="button" class="chip-remove-btn" onclick="clearAiAttachment()" title="Remove attachment">&times;</button>
+                </div>
+
                 <div class="chat-input-mega-box">
 
                     <input type="text"
                            id="aiQueryInput"
                            placeholder="Ask about an Indian Standard, product certification, BIS license, hallmarking, testing or compliance...">
 
+                    <!-- Hidden file input for attachment -->
+                    <input type="file" id="aiAttachmentInput" accept=".pdf,.docx,.png,.jpg,.jpeg" style="display: none;" onchange="handleAiAttachmentSelected(event)">
 
                     <div class="chat-input-actions">
 
-                        <button type="button">
-                            <i class="fa-solid fa-microphone"></i>
+                        <button type="button" id="aiMicBtn" onclick="toggleVoiceInput(event)" title="Click to speak (English / Hindi)">
+                            <i class="fa-solid fa-microphone" id="aiMicIcon"></i>
                         </button>
 
-                        <button type="button">
+                        <button type="button" id="aiAttachBtn" onclick="triggerAiAttachment(event)" title="Attach document (PDF/DOCX) for AI analysis">
                             <i class="fa-solid fa-paperclip"></i>
                         </button>
 
-                        <button type="button" class="submit-arrow"
-                                onclick="triggerAiChat(event)">
+                        <button type="button" class="submit-arrow" id="aiSubmitBtn"
+                                onclick="triggerAiChat(event)" title="Send Question">
 
                             <i class="fa-solid fa-arrow-right"></i>
 
@@ -383,7 +437,24 @@
                             Query will appear here
                         </div>
 
-                        <div class="answer-card-box">
+                        <!-- AI DIRECT ANSWER BOX -->
+                        <div class="ai-llm-response-card" id="aiLlmResponseCard">
+                            <div class="ai-llm-header">
+                                <div class="ai-badge-gov">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <span>BIS Sahayak AI</span>
+                                </div>
+                                <div class="ai-source-badge" id="aiSourceBadge">
+                                    <i class="fa-solid fa-bolt"></i>
+                                    <span id="aiModelName">OpenRouter AI</span>
+                                </div>
+                            </div>
+                            <div class="ai-llm-body" id="aiLlmBodyText">
+                                <!-- Injected dynamically -->
+                            </div>
+                        </div>
+
+                        <div class="answer-card-box" id="aiRecommendedStandardCard">
 
                             <div class="answer-card-header">
 
@@ -610,9 +681,10 @@
                     <i class="fa-solid fa-magnifying-glass"></i>
 
                     <input type="text"
+                           id="standardsSearchInput"
                            placeholder="Search for product, IS number, category, or keyword...">
 
-                    <button type="button" class="search-submit-btn">
+                    <button type="button" class="search-submit-btn" id="standardsSearchBtn" onclick="applyStandardsFilters()">
 
                         <i class="fa-solid fa-arrow-right"></i>
 
@@ -623,24 +695,59 @@
 
                 <div class="filter-dropdowns">
 
-                    <select>
-                        <option>Product Category</option>
+                    <select id="filterCategory" onchange="applyStandardsFilters()">
+                        <option value="">All Categories</option>
+                        <option value="Electrical">Electrical</option>
+                        <option value="Electrical Appliances">Electrical Appliances</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Civil">Civil & Construction</option>
+                        <option value="Mechanical">Mechanical</option>
+                        <option value="Chemical">Chemical</option>
+                        <option value="Food & Agriculture">Food & Agriculture</option>
+                        <option value="Textiles">Textiles & PPE</option>
                     </select>
 
-                    <select>
-                        <option>Industry</option>
+                    <select id="filterIndustry" onchange="applyStandardsFilters()">
+                        <option value="">All Industries</option>
+                        <option value="Lighting">Lighting</option>
+                        <option value="Consumer Electronics">Consumer Electronics</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Consumer Goods">Consumer Goods</option>
+                        <option value="Food & Beverages">Food & Beverages</option>
+                        <option value="Power & Transmission">Power & Transmission</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Infrastructure & Roads">Infrastructure & Roads</option>
+                        <option value="Information Technology">Information Technology</option>
                     </select>
 
-                    <select>
-                        <option>Year</option>
+                    <select id="filterYear" onchange="applyStandardsFilters()">
+                        <option value="">All Years</option>
+                        <option value="2024">2024</option>
+                        <option value="2023">2023</option>
+                        <option value="2022">2022</option>
+                        <option value="2020">2020</option>
+                        <option value="2019">2019</option>
+                        <option value="2018">2018</option>
+                        <option value="2016">2016</option>
+                        <option value="2015">2015</option>
+                        <option value="2012">2012</option>
+                        <option value="2010">2010</option>
+                        <option value="2008">2008</option>
+                        <option value="2000">2000</option>
                     </select>
 
-                    <select>
-                        <option>Status</option>
+                    <select id="filterStatus" onchange="applyStandardsFilters()">
+                        <option value="">All Statuses</option>
+                        <option value="Active">Active</option>
+                        <option value="Under Revision">Under Revision</option>
+                        <option value="Withdrawn">Withdrawn</option>
                     </select>
 
-                    <select>
-                        <option>Type</option>
+                    <select id="filterType" onchange="applyStandardsFilters()">
+                        <option value="">All Certification Types</option>
+                        <option value="Product Certification">Product Certification</option>
+                        <option value="Compulsory Registration">Compulsory Registration</option>
+                        <option value="Voluntary">Voluntary</option>
                     </select>
 
                 </div>
@@ -650,22 +757,26 @@
 
             <div class="results-meta-bar">
 
-                <span>
-                    Results <b>(1,245 standards)</b>
+                <span id="standardsCountBadge">
+                    Results <b>(Loading...)</b>
                 </span>
 
-                <span class="sort-box">
-                    Sort by:
-                    <b>
-                        Relevance
-                        <i class="fa-solid fa-chevron-down"></i>
-                    </b>
-                </span>
+                <div class="sort-box">
+                    <label for="standardsSort">Sort by:</label>
+                    <select id="standardsSort" onchange="applyStandardsFilters()">
+                        <option value="relevance">Relevance</option>
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="title_asc">Title (A - Z)</option>
+                        <option value="title_desc">Title (Z - A)</option>
+                        <option value="is_number">IS Number</option>
+                    </select>
+                </div>
 
             </div>
 
 
-            <div class="standard-list-container">
+            <div class="standard-list-container" id="standardsListContainer">
 
                 <div class="standard-row-card"
                      onclick="switchView('ai-response')">
@@ -825,66 +936,107 @@
 
             <div class="services-grid">
 
-                <div class="service-card">
+                <div class="service-card" onclick="openServiceModal('product_certification')">
                     <i class="fa-solid fa-certificate"></i>
-                    <h4>Product Certification</h4>
-                    <p>Ensure product quality and safety</p>
-                    <span>
+                    <h4>Product Certification (ISI Mark)</h4>
+                    <p>Ensure product quality and consumer safety under Scheme-I</p>
+                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('product_certification')">
                         Learn More
                         <i class="fa-solid fa-arrow-right"></i>
-                    </span>
+                    </button>
                 </div>
 
-                <div class="service-card">
+                <div class="service-card" onclick="openServiceModal('hallmarking')">
                     <i class="fa-solid fa-gem"></i>
-                    <h4>Hallmarking</h4>
-                    <p>Trust in precious metals and jewellery</p>
-                    <span>
+                    <h4>Hallmarking of Precious Metals</h4>
+                    <p>Trust in precious gold & silver with 6-digit HUID</p>
+                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('hallmarking')">
                         Learn More
                         <i class="fa-solid fa-arrow-right"></i>
-                    </span>
+                    </button>
                 </div>
 
-                <div class="service-card">
+                <div class="service-card" onclick="openServiceModal('lab_recognition')">
                     <i class="fa-solid fa-flask"></i>
-                    <h4>Laboratory Recognition</h4>
-                    <p>Accredited testing laboratories</p>
-                    <span>
+                    <h4>Laboratory Recognition (LRS)</h4>
+                    <p>Accredited testing facilities powering quality verification</p>
+                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('lab_recognition')">
                         Learn More
                         <i class="fa-solid fa-arrow-right"></i>
-                    </span>
+                    </button>
                 </div>
 
-                <div class="service-card">
+                <div class="service-card" onclick="openServiceModal('crs')">
                     <i class="fa-solid fa-file-signature"></i>
-                    <h4>BIS Registration</h4>
-                    <p>Register your establishment</p>
-                    <span>
+                    <h4>Compulsory Registration (CRS)</h4>
+                    <p>Self-declaration of conformity for Electronics & IT goods</p>
+                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('crs')">
                         Learn More
                         <i class="fa-solid fa-arrow-right"></i>
-                    </span>
+                    </button>
                 </div>
 
-                <div class="service-card">
+                <div class="service-card" onclick="openServiceModal('standards')">
                     <i class="fa-solid fa-book-bookmark"></i>
-                    <h4>Standards</h4>
-                    <p>Access Indian Standards catalogue</p>
-                    <span>
+                    <h4>Standards Formulation</h4>
+                    <p>Access the comprehensive repository of Indian Standards</p>
+                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('standards')">
                         Learn More
                         <i class="fa-solid fa-arrow-right"></i>
-                    </span>
+                    </button>
                 </div>
 
-                <div class="service-card">
+                <div class="service-card" onclick="openServiceModal('training')">
                     <i class="fa-solid fa-graduation-cap"></i>
-                    <h4>Training</h4>
-                    <p>Build skills and knowledge</p>
-                    <span>
+                    <h4>Training & Capacity (NITS)</h4>
+                    <p>National Institute of Training for Standardization programs</p>
+                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('training')">
                         Learn More
                         <i class="fa-solid fa-arrow-right"></i>
-                    </span>
+                    </button>
                 </div>
 
+            </div>
+
+            <!-- SERVICE DETAILS MODAL -->
+            <div id="serviceDetailsModal" class="service-modal-backdrop" style="display: none;" onclick="closeServiceModal()">
+                <div class="service-modal-dialog" onclick="event.stopPropagation()">
+                    <div class="service-modal-header">
+                        <div class="modal-title-wrap">
+                            <i id="svcModalIcon" class="fa-solid fa-certificate"></i>
+                            <div>
+                                <h3 id="svcModalTitle">Service Title</h3>
+                                <span id="svcModalSubtitle">Service Subtitle</span>
+                            </div>
+                        </div>
+                        <button type="button" class="modal-close-btn" onclick="closeServiceModal()">&times;</button>
+                    </div>
+                    <div class="service-modal-body">
+                        <div class="svc-section">
+                            <h4>Overview</h4>
+                            <p id="svcModalOverview"></p>
+                        </div>
+                        <div class="svc-section">
+                            <h4>Key Features & Benefits</h4>
+                            <ul id="svcModalFeatures"></ul>
+                        </div>
+                        <div class="svc-section">
+                            <h4>Application Workflow</h4>
+                            <ol id="svcModalWorkflow"></ol>
+                        </div>
+                        <div class="svc-section">
+                            <h4>Required Documentation</h4>
+                            <ul id="svcModalDocs"></ul>
+                        </div>
+                    </div>
+                    <div class="service-modal-footer">
+                        <a id="svcModalPortalLink" href="https://www.services.bis.gov.in" target="_blank" rel="noopener noreferrer" class="primary-btn">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            Visit Official Portal
+                        </a>
+                        <button type="button" class="secondary-btn" onclick="closeServiceModal()">Close</button>
+                    </div>
+                </div>
             </div>
 
         </section>
@@ -1251,7 +1403,7 @@
                     Verify Before You Buy
 
                     <span>
-                        Check authenticity of BIS certified products
+                        Check authenticity of BIS certified products, Hallmarked jewellery & file consumer grievances
                     </span>
 
                 </div>
@@ -1259,84 +1411,172 @@
 
                 <div class="ver-tabs">
 
-                    <button class="active">
+                    <button type="button" class="tab-btn active" id="tabBtnLicense" onclick="switchConsumerTab('license')">
+                        <i class="fa-solid fa-id-card"></i>
                         Verify License
                     </button>
 
-                    <button>
-                        Verify Hallmark
+                    <button type="button" class="tab-btn" id="tabBtnHallmark" onclick="switchConsumerTab('hallmark')">
+                        <i class="fa-solid fa-gem"></i>
+                        Verify Hallmark (HUID)
                     </button>
 
-                    <button>
+                    <button type="button" class="tab-btn" id="tabBtnComplaint" onclick="switchConsumerTab('complaint')">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
                         Report Complaint
                     </button>
 
                 </div>
 
 
-                <label>
-                    Enter License / Registration Number
-                </label>
+                <!-- TAB 1: VERIFY LICENSE -->
+                <div class="ver-tab-content active" id="verTabLicense">
+                    <label for="licenseInput">
+                        Enter License / Registration Number
+                    </label>
 
+                    <div class="ver-input-row">
+                        <input type="text"
+                               id="licenseInput"
+                               value="CM/L-1234567"
+                               placeholder="e.g. CM/L-1234567, CM/L-7654321, R-41000001">
 
-                <div class="ver-input-row">
+                        <button type="button" class="primary-btn" id="licenseVerifyBtn" onclick="verifyLicenseNumber(document.getElementById('licenseInput').value.trim())">
+                            <i class="fa-solid fa-check-double"></i>
+                            Verify License
+                        </button>
+                    </div>
 
-                    <input type="text"
-                           value="CM/L-1234567">
+                    <div class="sample-pills-row">
+                        <span>Quick Samples:</span>
+                        <button type="button" class="sample-pill" onclick="setLicenseSample('CM/L-1234567')">CM/L-1234567 (LED Light)</button>
+                        <button type="button" class="sample-pill" onclick="setLicenseSample('CM/L-7654321')">CM/L-7654321 (Cement)</button>
+                        <button type="button" class="sample-pill" onclick="setLicenseSample('R-41000001')">R-41000001 (Smartphone)</button>
+                    </div>
 
-                    <button type="button" class="primary-btn">
-                        Verify
-                    </button>
-
+                    <div class="verified-success-box" id="licenseResultBox">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div>
+                            <h4>Verified</h4>
+                            <p>This BIS license is active and valid.</p>
+                            <div class="ver-details-grid">
+                                <span>License Number: <b>CM/L-1234567</b></span>
+                                <span>Product: <b>LED Street Light</b></span>
+                                <span>Manufacturer: <b>ABC Electronics Pvt. Ltd.</b></span>
+                                <span>Validity: <b>12 Jan 2024 – 11 Jan 2026</b></span>
+                                <span>Applicable Standard: <b>IS 10322 : 2012</b></span>
+                                <span>Status: <b class="text-success">Active / Operating</b></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
 
-                <div class="verified-success-box">
+                <!-- TAB 2: VERIFY HALLMARK (HUID) -->
+                <div class="ver-tab-content" id="verTabHallmark" style="display: none;">
+                    <label for="hallmarkInput">
+                        Enter 6-Character Hallmark Unique Identification (HUID)
+                    </label>
 
-                    <i class="fa-solid fa-circle-check"></i>
+                    <div class="ver-input-row">
+                        <input type="text"
+                               id="hallmarkInput"
+                               placeholder="e.g. AB1234, MN5678, KL9012, HG3421"
+                               maxlength="6"
+                               style="text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">
 
-                    <div>
-
-                        <h4>
-                            Verified
-                        </h4>
-
-                        <p>
-                            This BIS license is active and valid.
-                        </p>
-
-
-                        <div class="ver-details-grid">
-
-                            <span>
-                                License Number:
-                                <b>CM/L-1234567</b>
-                            </span>
-
-                            <span>
-                                Product:
-                                <b>LED Street Light</b>
-                            </span>
-
-                            <span>
-                                Manufacturer:
-                                <b>ABC Electronics Pvt. Ltd.</b>
-                            </span>
-
-                            <span>
-                                Validity:
-                                <b>12 Jan 2024 – 11 Jan 2026</b>
-                            </span>
-
-                            <span>
-                                Applicable Standard:
-                                <b>IS 10322 : 2012</b>
-                            </span>
-
-                        </div>
-
+                        <button type="button" class="primary-btn" id="hallmarkVerifyBtn" onclick="verifyHallmark()">
+                            <i class="fa-solid fa-gem"></i>
+                            Verify Hallmark
+                        </button>
                     </div>
 
+                    <div class="sample-pills-row">
+                        <span>Sample HUIDs:</span>
+                        <button type="button" class="sample-pill" onclick="setHallmarkSample('AB1234')">AB1234 (Gold 22K)</button>
+                        <button type="button" class="sample-pill" onclick="setHallmarkSample('MN5678')">MN5678 (Gold 18K)</button>
+                        <button type="button" class="sample-pill" onclick="setHallmarkSample('KL9012')">KL9012 (Silver 999)</button>
+                        <button type="button" class="sample-pill" onclick="setHallmarkSample('HG3421')">HG3421 (Gold 24K)</button>
+                    </div>
+
+                    <div id="hallmarkResultBox" style="display: none;">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+
+
+                <!-- TAB 3: REPORT COMPLAINT -->
+                <div class="ver-tab-content" id="verTabComplaint" style="display: none;">
+                    <div class="complaint-intro-box">
+                        <i class="fa-solid fa-shield-cat"></i>
+                        <div>
+                            <h4>BIS Consumer Grievance Portal</h4>
+                            <p>Report misuse of ISI Mark, counterfeit hallmarks, substandard products, or misleading quality claims directly to the Bureau of Indian Standards.</p>
+                        </div>
+                    </div>
+
+                    <form id="complaintForm" onsubmit="submitComplaint(event)">
+                        <div class="form-grid-2col">
+                            <div class="form-group">
+                                <label for="cmpName">Complainant Name *</label>
+                                <input type="text" id="cmpName" placeholder="Enter your full name" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cmpEmail">Email Address *</label>
+                                <input type="email" id="cmpEmail" placeholder="e.g. yourname@example.com" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cmpPhone">Phone Number *</label>
+                                <input type="tel" id="cmpPhone" placeholder="10-digit mobile number" pattern="[0-9]{10}" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cmpCategory">Product Category *</label>
+                                <select id="cmpCategory" required>
+                                    <option value="">Select Category</option>
+                                    <option value="Electronics & IT">Electronics & IT Goods</option>
+                                    <option value="Electrical Appliances">Electrical Appliances</option>
+                                    <option value="Gold & Jewellery">Gold & Jewellery (Hallmarking)</option>
+                                    <option value="Construction & Cement">Construction Materials / Cement</option>
+                                    <option value="Food & Packaged Water">Food & Packaged Drinking Water</option>
+                                    <option value="Automobile & Tyres">Automobile / Tyres</option>
+                                    <option value="Chemicals & Fertilizers">Chemicals & Fertilizers</option>
+                                    <option value="Other">Other Products</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cmpReference">License / Standard / HUID / Brand Reference</label>
+                                <input type="text" id="cmpReference" placeholder="e.g. CM/L-1234567 or IS 10322 or HUID AB1234">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="cmpSubject">Complaint Subject *</label>
+                                <input type="text" id="cmpSubject" placeholder="e.g. Substandard LED bulb with fake ISI mark" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 12px;">
+                            <label for="cmpDescription">Grievance Details & Evidence *</label>
+                            <textarea id="cmpDescription" rows="4" placeholder="Describe the violation, seller/manufacturer name, purchase location, invoice number, and why product fails BIS standards..." required></textarea>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 16px;">
+                            <button type="submit" class="primary-btn" id="cmpSubmitBtn">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                Submit Complaint to BIS
+                            </button>
+                            <button type="reset" class="secondary-btn" onclick="document.getElementById('complaintResultBox').style.display='none'">
+                                Clear Form
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="complaintResultBox" style="display: none; margin-top: 20px;">
+                        <!-- Injected dynamically -->
+                    </div>
                 </div>
 
             </div>
@@ -1531,50 +1771,76 @@
 
 
 
-        <!-- VIEW 10: HISTORY / ABOUT -->
+        <!-- VIEW 10: HISTORY & AUDIT LOG -->
         <section id="history"
                  class="app-view">
 
-            <div class="about-card-container">
+            <div class="history-view-container">
 
-                <h2>
-                    About BIS AI Assistant
-                </h2>
+                <div class="history-header-card">
+                    <div class="history-header-left">
+                        <h2>
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            User Activity & Audit History
+                        </h2>
+                        <p>
+                            Review your recent queries, standards searches, uploaded documents, compliance checks, hallmark checks, and reported complaints.
+                        </p>
+                    </div>
 
-                <p>
+                    <div class="history-header-right">
+                        <button type="button" class="secondary-btn btn-danger-outline" onclick="clearUserHistory()" title="Clear your activity history">
+                            <i class="fa-solid fa-trash-can"></i>
+                            Clear History
+                        </button>
+                    </div>
+                </div>
 
-                    Built for
-                    <b>Smart India Hackathon 2026</b>.
+                <!-- Filter Chips -->
+                <div class="history-filter-bar">
+                    <button type="button" class="history-filter-chip active" data-filter="all" onclick="filterHistory('all')">
+                        <i class="fa-solid fa-layer-group"></i> All Activity
+                    </button>
+                    <button type="button" class="history-filter-chip" data-filter="ai_query" onclick="filterHistory('ai_query')">
+                        <i class="fa-solid fa-robot"></i> AI Queries
+                    </button>
+                    <button type="button" class="history-filter-chip" data-filter="standard_search" onclick="filterHistory('standard_search')">
+                        <i class="fa-solid fa-magnifying-glass"></i> Standards Search
+                    </button>
+                    <button type="button" class="history-filter-chip" data-filter="document_upload" onclick="filterHistory('document_upload')">
+                        <i class="fa-solid fa-file-arrow-up"></i> Documents
+                    </button>
+                    <button type="button" class="history-filter-chip" data-filter="compliance_check" onclick="filterHistory('compliance_check')">
+                        <i class="fa-solid fa-list-check"></i> Compliance
+                    </button>
+                    <button type="button" class="history-filter-chip" data-filter="hallmark_verification" onclick="filterHistory('hallmark_verification')">
+                        <i class="fa-solid fa-gem"></i> Hallmark Checks
+                    </button>
+                    <button type="button" class="history-filter-chip" data-filter="complaint" onclick="filterHistory('complaint')">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Complaints
+                    </button>
+                </div>
 
-                    An AI-powered platform to simplify access to
-                    Indian Standards and BIS services for industries
-                    and consumers.
+                <!-- Timeline List Container -->
+                <div class="history-timeline-container" id="historyTimelineContainer">
+                    <div class="loading-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <span>Loading your activity history...</span>
+                    </div>
+                </div>
 
-                </p>
-
-
-                <div class="pill-badge-row">
-
-                    <span>
-                        <i class="fa-solid fa-lightbulb"></i>
-                        Innovation through AI
-                    </span>
-
-                    <span>
-                        <i class="fa-solid fa-universal-access"></i>
-                        Accessible for Everyone
-                    </span>
-
-                    <span>
-                        <i class="fa-solid fa-shield"></i>
-                        Trusted Information
-                    </span>
-
-                    <span>
-                        <i class="fa-solid fa-flag"></i>
-                        Stronger India
-                    </span>
-
+                <!-- SIH 2026 Project Info Card -->
+                <div class="about-card-container" style="margin-top: 32px;">
+                    <h2>About BIS Sahayak / BIS AI Assistant</h2>
+                    <p>
+                        Developed for <b>Smart India Hackathon 2026</b>. An intelligent multi-lingual platform connecting citizens, manufacturers, and quality officers with Indian Standards (IS), automated compliance analysis, and trusted certification verification.
+                    </p>
+                    <div class="pill-badge-row">
+                        <span><i class="fa-solid fa-lightbulb"></i> SIH 2026 Innovation</span>
+                        <span><i class="fa-solid fa-shield-halved"></i> Bureau of Indian Standards</span>
+                        <span><i class="fa-solid fa-language"></i> Multi-Lingual Support</span>
+                        <span><i class="fa-solid fa-flag"></i> Made for India</span>
+                    </div>
                 </div>
 
             </div>
@@ -1583,6 +1849,109 @@
 
 
     </main>
+
+
+    <!-- LOGIN & ACCOUNT SWITCHER MODAL -->
+    <div class="modal-overlay" id="loginModal" style="display: none;" onclick="closeLoginModal(event)">
+        <div class="modal-card auth-modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title-wrap">
+                    <i class="fa-solid fa-shield-halved auth-logo-icon"></i>
+                    <div>
+                        <h3>Sign In / Switch Account</h3>
+                        <span>Access your personalized BIS Sahayak workspace</span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
+            </div>
+
+            <div class="modal-body auth-modal-body">
+                <!-- Google Sign-In Section -->
+                <div class="auth-section">
+                    <label class="auth-label">Google One-Tap / Sign-In</label>
+                    <div id="googleSignInButtonWrap" class="google-btn-container">
+                        <div id="g_id_onload"
+                             data-client_id="demo-bis-sih2026.apps.googleusercontent.com"
+                             data-context="signin"
+                             data-callback="handleGoogleCredentialResponse"
+                             data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                             data-type="standard"
+                             data-shape="rectangular"
+                             data-theme="outline"
+                             data-text="signin_with"
+                             data-size="large"
+                             data-logo_alignment="left">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="auth-divider">
+                    <span>OR INSTANT DEMO LOGIN</span>
+                </div>
+
+                <!-- Fast Demo Profiles -->
+                <div class="demo-login-grid">
+                    <button type="button" class="demo-login-card" onclick="loginWithDemo('officer')">
+                        <div class="demo-avatar"><i class="fa-solid fa-user-tie"></i></div>
+                        <div class="demo-info">
+                            <strong>Raj Kumar</strong>
+                            <span>BIS Quality Officer</span>
+                        </div>
+                        <span class="badge-tag success">Officer</span>
+                    </button>
+
+                    <button type="button" class="demo-login-card" onclick="loginWithDemo('manufacturer')">
+                        <div class="demo-avatar"><i class="fa-solid fa-industry"></i></div>
+                        <div class="demo-info">
+                            <strong>Sunita Verma</strong>
+                            <span>Apex Electronics Pvt. Ltd.</span>
+                        </div>
+                        <span class="badge-tag warning">Industry</span>
+                    </button>
+
+                    <button type="button" class="demo-login-card" onclick="loginWithDemo('consumer')">
+                        <div class="demo-avatar"><i class="fa-solid fa-cart-shopping"></i></div>
+                        <div class="demo-info">
+                            <strong>Amit Sharma</strong>
+                            <span>Informed Citizen / Consumer</span>
+                        </div>
+                        <span class="badge-tag primary">Citizen</span>
+                    </button>
+                </div>
+
+                <div class="auth-divider">
+                    <span>OR CUSTOM CREDENTIALS</span>
+                </div>
+
+                <form id="customLoginForm" onsubmit="loginWithCustom(event)">
+                    <div class="form-grid-2col">
+                        <div class="form-group">
+                            <label for="loginCustomName">Full Name</label>
+                            <input type="text" id="loginCustomName" placeholder="e.g. Ramesh Patel" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="loginCustomEmail">Email Address</label>
+                            <input type="email" id="loginCustomEmail" placeholder="ramesh@example.com" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="loginCustomRole">Designation / Role</label>
+                        <select id="loginCustomRole">
+                            <option value="BIS Officer">BIS Quality Officer</option>
+                            <option value="Manufacturer / Industry" selected>Manufacturer / Industry</option>
+                            <option value="Consumer">Citizen / Consumer</option>
+                            <option value="Standards Auditor">Standards Auditor / Lab In-Charge</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="primary-btn w-100" style="margin-top: 14px; justify-content: center; width: 100%;">
+                        <i class="fa-solid fa-right-to-bracket"></i> Sign In to BIS Sahayak
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 
 
     <script src="script.js"></script>

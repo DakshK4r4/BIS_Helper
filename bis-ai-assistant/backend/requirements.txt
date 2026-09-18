@@ -5,3 +5,4 @@ Werkzeug
 pypdf
 python-docx
 PyPDF2
+requests
