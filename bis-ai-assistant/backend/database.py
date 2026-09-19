@@ -314,7 +314,10 @@ def init_db():
         ("IS 73 : 2013", "Paving Bitumen – Specification", "Grades and specifications for paving grade bitumen used in road and highway construction.", "Chemical", "Infrastructure & Roads", 2013, "Active", "Voluntary", "bitumen,asphalt,roads,highway,chemical,paving"),
         ("IS 16102 (Part 1) : 2012", "Self-Ballasted LED Lamps for General Lighting Services – Safety", "Safety requirements for self-ballasted LED lamps for domestic and commercial lighting.", "Electrical", "Lighting", 2012, "Active", "Compulsory Registration", "led bulb,lamp,self ballasted,lighting,energy"),
         ("IS 13252 (Part 1) : 2010", "Information Technology Equipment – Safety – General Requirements", "Essential safety requirements for IT equipment, computers, chargers and power supplies.", "Electronics", "Information Technology", 2010, "Active", "Compulsory Registration", "it equipment,computer,laptop,charger,safety,adapter"),
-        ("IS 269 : 2015", "Ordinary Portland Cement – Specification", "Physical and chemical requirements for 33, 43, and 53 grade Ordinary Portland Cement.", "Civil", "Construction", 2015, "Active", "Product Certification", "cement,portland cement,opc,concrete,civil")
+        ("IS 269 : 2015", "Ordinary Portland Cement – Specification", "Physical and chemical requirements for 33, 43, and 53 grade Ordinary Portland Cement.", "Civil", "Construction", 2015, "Active", "Product Certification", "cement,portland cement,opc,concrete,civil"),
+        ("IS 1239 (Part 1) : 2004", "Mild Steel Tubes, Tubulars and Other Wrought Steel Fittings - Part 1: Steel Tubes", "Requirements for welded and seamless, screwed and socketed, and plain end mild steel tubes for water, gas, air, and steam. Specifies OD limit tolerances of +10% to -10%.", "Metallurgy & Steel", "Manufacturing", 2004, "Active", "Product Certification", "mild steel tubes,tubulars,steel pipe,outer diameter,hydraulic,hydrostatic,tolerance,pipe"),
+        ("IS 1489 (Part 1) : 2015", "Portland Pozzolana Cement Specification (Part 1: Fly Ash Based)", "Specification for fly ash based Portland Pozzolana Cement for civil engineering and general building construction.", "Civil Engineering", "Construction", 2015, "Active", "Product Certification", "cement,pozzolana,fly ash,portland,concrete"),
+        ("IS 1865 : 1991", "Spheroidal Graphite Iron Castings Specification", "Requirements for spheroidal graphite or nodular iron castings used for automotive and engineering parts.", "Metallurgy & Steel", "Automotive & Engineering", 1991, "Active", "Voluntary", "iron castings,graphite,nodular iron,castings,metallurgy")
     ]
 
     for std in standards:
@@ -356,6 +359,20 @@ def init_db():
         'Active'
     ))
 
+    cursor.execute("""
+        INSERT OR IGNORE INTO licenses
+        (license_number, product, manufacturer, standard, validity_from, validity_to, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        'CM/L-9812234',
+        'Steel Pipes & Tubular Fittings',
+        'Tata Quality Castings',
+        'IS 1239 (Part 1) : 2004',
+        '15 Oct 2023',
+        '14 Oct 2026',
+        'Active'
+    ))
+
     # ========================================================
     # SEED HALLMARK REGISTRY RECORDS
     # ========================================================
@@ -373,6 +390,42 @@ def init_db():
             (huid, article_type, purity, jeweler_name, ahc_name, hallmark_date, status)
             VALUES (?, ?, ?, ?, ?, ?, 'VERIFIED')
         """, h)
+
+    # ========================================================
+    # SEED COMPLAINTS (FIGMA DESIGN LOG RECORDS)
+    # ========================================================
+
+    complaints_seed = [
+        ('CMP-2026-042', 'usr_officer_demo_01', 'Inspector G. S. Bhatti', 'g.bhatti@bis.gov.in', 'ISI Mark Misuse', 'IS 1239 : Part 1', 'Substandard MS Pipes Batch C', 'Substandard wall thickness detected in commercial batch shipments. OD limit exceeded.', 'IN_PROGRESS'),
+        ('CMP-2026-039', 'usr_officer_demo_01', 'Dr. R. K. Prasad', 'rkprasad@nic.in', 'Counterfeit Goods', 'IS 2062 : 2011', 'Counterfeit Structural Steel Beams', 'Counterfeit ISI mark labeling and substandard tensile strength on structural steel angles.', 'UNDER_REVIEW'),
+        ('CMP-2026-035', 'usr_officer_demo_01', 'Officer A. K. Sen', 'ak.sen@bis.gov.in', 'Product Quality', 'IS 1489 : Part 1', 'Adulterated Portland Pozzolana Cement', 'Fly-ash ratio variance observed exceeding mandatory 35% ceiling.', 'RESOLVED'),
+        ('CMP-2026-031', 'usr_officer_demo_01', 'Citizen Complainant', 'citizen@consumer.org', 'Uncertified Product', 'IS 302 : Part 1', 'Non-certified Domestic Switches', 'Domestic toggle switches sold without mandatory ISI certification marking.', 'PENDING')
+    ]
+
+    for c in complaints_seed:
+        cursor.execute("""
+            INSERT OR IGNORE INTO complaints
+            (complaint_id, user_id, name, contact, category, ref_number, subject, description, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, c)
+
+    # ========================================================
+    # SEED INITIAL NOTIFICATIONS
+    # ========================================================
+
+    notif_count = cursor.execute("SELECT COUNT(*) FROM notifications WHERE user_id = 'usr_officer_demo_01'").fetchone()[0]
+    if notif_count == 0:
+        notifications_seed = [
+            ('usr_officer_demo_01', 'BIS Live Server Database Synchronization Completed', 'All 24,000+ active IS standard documents synchronized successfully with centralized gazette register.', 'system', 0),
+            ('usr_officer_demo_01', 'Critical Gaps Found in Precast Concrete Solid Billet Audit', 'Audit report AUD-233B flagged for junction thickness drops. Requires immediate administrative calibration notification.', 'warning', 0),
+            ('usr_officer_demo_01', 'New Amendment Published for Portland Cement (IS 1489)', 'BIS metallurgical division issued Gazetted revision details on fly-ash ratios. Check standard compliance checker update requirements.', 'info', 0),
+            ('usr_officer_demo_01', 'New Consumable Substandard Product Complaint Filed', 'Substandard Steel Pipe Batch C violation complaint registered under CMP-2026-042. Assigned automatically to G. S. Bhatti.', 'info', 1)
+        ]
+        for n in notifications_seed:
+            cursor.execute("""
+                INSERT INTO notifications (user_id, title, message, type, is_read)
+                VALUES (?, ?, ?, ?, ?)
+            """, n)
 
     conn.commit()
     conn.close()

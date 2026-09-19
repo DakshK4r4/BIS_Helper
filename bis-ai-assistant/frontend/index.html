@@ -1,1960 +1,1350 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>BIS AI Assistant - Smart India Hackathon</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <title>BIS Sahayak - AI Compliance & Standards Portal</title>
+    
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Application Stylesheet -->
     <link rel="stylesheet" href="style.css">
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
-
 <body>
 
-    <!-- SIDEBAR NAVIGATION -->
-    <aside class="sidebar">
+    <!-- APP WRAPPER CONTAINER -->
+    <div class="app-container">
 
-        <div class="sidebar-top">
-
-            <div class="app-logo">
-                <i class="fa-solid fa-shield-halved"></i>
-
-                <div>
-                    <h4>BIS AI Assistant</h4>
-                    <span>Understand Standards, Simplify Compliance.</span>
+        <!-- ========================================================
+             DESKTOP SIDEBAR NAVIGATION (Pages 1-16)
+             ======================================================== -->
+        <aside class="sidebar" id="appSidebar">
+            <div>
+                <!-- Brand Logo Header -->
+                <div class="sidebar-brand">
+                    <div class="brand-icon">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div class="brand-text">
+                        <h2>BIS Sahayak</h2>
+                        <span class="brand-badge">COMPLIANCE AI</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="sidebar-action-btn"
-                 onclick="switchView('ai-chat')">
-
-                <i class="fa-solid fa-plus"></i>
-                New Chat
-
-            </div>
-
-            <ul class="nav-menu">
-
-                <li class="active"
-                    onclick="switchView('landing', this)">
-                    <i class="fa-solid fa-house"></i>
-                    Home
-                </li>
-
-                <li onclick="switchView('ai-chat', this)">
-                    <i class="fa-solid fa-robot"></i>
-                    AI Assistant
-                </li>
-
-                <li onclick="switchView('standards', this)">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    Standards Search
-                </li>
-
-                <li onclick="switchView('services', this)">
-                    <i class="fa-solid fa-layer-group"></i>
-                    BIS Services
-                </li>
-
-                <li onclick="switchView('compliance', this)">
-                    <i class="fa-solid fa-list-check"></i>
-                    Compliance Checker
-                </li>
-
-                <li onclick="switchView('document', this)">
-                    <i class="fa-solid fa-file-arrow-up"></i>
-                    Document Intelligence
-                </li>
-
-                <li onclick="switchView('consumer', this)">
-                    <i class="fa-solid fa-shield-check"></i>
-                    Certification Verification
-                </li>
-
-                <li onclick="switchView('dashboard', this)">
-                    <i class="fa-solid fa-chart-pie"></i>
-                    Industry Dashboard
-                </li>
-
-                <li onclick="switchView('history', this)">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    History
-                </li>
-
-            </ul>
-
-        </div>
-
-        <div class="sidebar-footer">
-
-            <div class="badge-box">
-                <h5>A Safer Tomorrow</h5>
-                <p>Through Standards</p>
-            </div>
-
-        </div>
-
-    </aside>
-
-
-    <!-- MAIN APP WRAPPER -->
-    <main class="main-wrapper">
-
-
-        <!-- TOP HEADER NAVBAR -->
-        <header class="top-header">
-
-            <div class="header-left">
-                <h3 id="topHeaderTitle">Home</h3>
-                <span id="topHeaderSubtitle">Understand Standards, Simplify Compliance</span>
-            </div>
-
-            <div class="header-right">
-
-                <!-- Language Toggle Button -->
-                <button type="button" class="lang-toggle-btn" id="langToggleBtn" onclick="toggleLanguage()">
-                    <i class="fa-solid fa-globe"></i>
-                    <span id="langBtnText">English | हिंदी</span>
-                </button>
-
-                <!-- Dark / Light Theme Button -->
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
-                    <i class="fa-solid fa-moon" id="themeToggleIcon"></i>
-                </button>
-
-                <!-- Notification Bell & Dropdown -->
-                <div class="notifications-icon-wrap" id="notifBtnWrap">
-                    <button type="button" class="notif-btn" id="notifBtn" onclick="toggleNotifications(event)" title="Notifications">
+                <!-- Navigation Links List -->
+                <nav class="sidebar-nav">
+                    <a href="#landing" class="nav-item active" data-view="landing" id="nav-landing">
+                        <i class="fa-solid fa-house"></i>
+                        <span>Home</span>
+                    </a>
+                    <a href="#ai-chat" class="nav-item" data-view="ai-chat" id="nav-ai-chat">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>AI Assistant</span>
+                    </a>
+                    <a href="#document" class="nav-item" data-view="document" id="nav-document">
+                        <i class="fa-regular fa-file-lines"></i>
+                        <span>Document Analyzer</span>
+                    </a>
+                    <a href="#dashboard" class="nav-item" data-view="dashboard" id="nav-dashboard">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a href="#standards" class="nav-item" data-view="standards" id="nav-standards">
+                        <i class="fa-regular fa-bookmark"></i>
+                        <span>Standards Library</span>
+                    </a>
+                    <a href="#complaints" class="nav-item" data-view="complaints" id="nav-complaints">
+                        <i class="fa-regular fa-circle-exclamation"></i>
+                        <span>Complaints</span>
+                    </a>
+                    <a href="#notifications" class="nav-item" data-view="notifications" id="nav-notifications">
                         <i class="fa-regular fa-bell"></i>
-                        <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                        <span>Notifications</span>
+                        <span class="nav-badge" id="sidebarNotifBadge">3</span>
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Sidebar Footer Aid Badge -->
+            <div class="sidebar-footer">
+                <div class="standards-aid-card">
+                    <i class="fa-solid fa-circle-info aid-icon"></i>
+                    <div class="aid-text">
+                        <h4>National Standards Aid</h4>
+                        <p>Supporting Indian Quality & Trust under BIS Framework.</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ========================================================
+             MAIN VIEWPORT & CONTENT AREA
+             ======================================================== -->
+        <div class="main-wrapper">
+
+            <!-- Mobile Compact Header Bar (Pages 17-24) -->
+            <div class="mobile-header-bar">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="brand-icon" style="width: 28px; height: 28px; font-size: 0.9rem;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <span style="font-weight: 800; font-size: 0.95rem;">BIS Sahayak</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="status-indicator-pill" style="padding: 4px 8px; font-size: 0.7rem;">
+                        <span class="status-dot"></span> Live
+                    </div>
+                    <button class="theme-btn" id="mobileThemeToggle" title="Toggle Theme" style="padding: 4px;">
+                        <i class="fa-regular fa-moon"></i>
                     </button>
-
-                    <div class="notif-dropdown-panel" id="notifDropdown" style="display: none;" onclick="event.stopPropagation()">
-                        <div class="notif-header">
-                            <div class="notif-title">
-                                <i class="fa-solid fa-bell"></i>
-                                <span>Notifications</span>
-                            </div>
-                            <button type="button" class="notif-mark-read-btn" onclick="markAllNotificationsRead()">Mark all read</button>
-                        </div>
-                        <div class="notif-list" id="notifList">
-                            <!-- Injected dynamically -->
-                        </div>
+                    <div class="avatar-circle" id="mobileUserAvatar" style="width: 30px; height: 30px; font-size: 0.75rem;">
+                        RP
                     </div>
                 </div>
-
-                <!-- User Profile Pill & Dropdown -->
-                <div class="user-profile-pill" id="userProfilePill" onclick="toggleUserMenu(event)">
-
-                    <div class="avatar-circle" id="userAvatar">
-                        RK
-                    </div>
-
-                    <div class="user-meta">
-                        <h5 id="userName">Raj Kumar</h5>
-                        <span id="userRole">BIS Quality Officer</span>
-                    </div>
-
-                    <i class="fa-solid fa-chevron-down pill-chevron"></i>
-
-                    <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none;" onclick="event.stopPropagation()">
-                        <div class="dropdown-user-header">
-                            <strong id="menuUserName">Raj Kumar</strong>
-                            <span id="menuUserEmail">officer@bis.gov.in</span>
-                            <div class="auth-provider-badge" id="menuUserRole">BIS Officer (Demo)</div>
-                        </div>
-                        <div class="dropdown-divider"></div>
-                        <button type="button" class="dropdown-item" onclick="switchView('history'); closeAllDropdowns();">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                            My Activity History
-                        </button>
-                        <button type="button" class="dropdown-item" onclick="switchView('dashboard'); closeAllDropdowns();">
-                            <i class="fa-solid fa-chart-pie"></i>
-                            Industry Dashboard
-                        </button>
-                        <button type="button" class="dropdown-item" onclick="openLoginModal(); closeAllDropdowns();">
-                            <i class="fa-solid fa-user-gear"></i>
-                            Switch Account / Google Sign-In
-                        </button>
-                        <div class="dropdown-divider"></div>
-                        <button type="button" class="dropdown-item text-danger" onclick="logoutUser()">
-                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                            Sign Out
-                        </button>
-                    </div>
-
-                </div>
-
             </div>
 
-        </header>
+            <!-- Desktop Top Header Navbar (Pages 1-16) -->
+            <header class="top-header" id="topHeader">
+                <div class="header-left">
+                    <h1 class="header-title" id="pageTitle">BIS Compliance Portal</h1>
+                    <span class="header-subtitle" id="pageSubtitle">Smart India Hackathon 2026 • Final Presentation</span>
+                </div>
 
+                <div class="header-right">
+                    <!-- Global Search Bar -->
+                    <div class="header-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="globalStandardsSearch" placeholder="Search Indian Standards (e.g. IS 1239)...">
+                    </div>
 
+                    <!-- BIS Live Server Status -->
+                    <div class="status-indicator-pill">
+                        <span class="status-dot"></span>
+                        <span>BIS Live Server</span>
+                    </div>
 
-        <!-- VIEW 1: LANDING PAGE -->
-        <section id="landing"
-                 class="app-view active-view">
-
-            <div class="hero-card">
-
-                <div class="hero-content">
-
-                    <span class="pill-tag">
-                        <i class="fa-solid fa-bolt"></i>
-                        BIS AI Assistant
-                    </span>
-
-                    <h1>
-                        India's Intelligent Assistant for
-                        <span>Standards & BIS Services</span>
-                    </h1>
-
-                    <p>
-                        Find Indian Standards, understand compliance requirements,
-                        discover BIS services, and get trusted guidance through AI.
-                    </p>
-
-                    <div class="hero-actions">
-
-                        <button type="button" class="primary-btn"
-                                onclick="switchView('ai-chat')">
-
-                            <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            Ask BIS AI
-
+                    <!-- Light / Dark Theme Switcher -->
+                    <div class="theme-switch-pill">
+                        <button class="theme-btn active" id="btnThemeLight">
+                            <i class="fa-regular fa-sun"></i> Light
                         </button>
-
-                        <button type="button" class="secondary-btn"
-                                onclick="switchView('standards')">
-
-                            <i class="fa-solid fa-compass"></i>
-                            Explore Standards
-
+                        <button class="theme-btn" id="btnThemeDark">
+                            <i class="fa-regular fa-moon"></i> Dark
                         </button>
-
                     </div>
 
-                </div>
-
-
-                <div class="hero-graphics">
-
-                    <div class="mini-floating-card">
-                        Safer Products
-                    </div>
-
-                    <div class="mini-floating-card">
-                        Stronger Industries
-                    </div>
-
-                    <div class="mini-floating-card">
-                        Empowered Consumers
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <div class="stats-row">
-
-                <div class="stat-box">
-
-                    <i class="fa-solid fa-award"></i>
-
-                    <div>
-                        <h3>10,000+</h3>
-                        <span>Indian Standards</span>
-                    </div>
-
-                </div>
-
-
-                <div class="stat-box">
-
-                    <i class="fa-solid fa-layer-group"></i>
-
-                    <div>
-                        <h3>BIS Services</h3>
-                        <span>One Platform</span>
-                    </div>
-
-                </div>
-
-
-                <div class="stat-box">
-
-                    <i class="fa-solid fa-building-columns"></i>
-
-                    <div>
-                        <h3>Trusted</h3>
-                        <span>Government Inspired</span>
-                    </div>
-
-                </div>
-
-
-                <div class="stat-box">
-
-                    <i class="fa-solid fa-users"></i>
-
-                    <div>
-                        <h3>For Industries</h3>
-                        <span>& Consumers</span>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 2: AI ASSISTANT -->
-        <section id="ai-chat"
-                 class="app-view">
-
-            <div class="chat-container-card">
-
-                <div class="chat-header-banner">
-
-                    <h2>
-                        Ask anything about
-                        <span>Indian Standards</span>
-                    </h2>
-
-                    <p>
-                        Get accurate, reliable and easy-to-understand answers
-                        from our AI assistant
-                    </p>
-
-                </div>
-
-
-                <!-- ATTACHMENT CHIP -->
-                <div id="aiAttachmentChip" class="ai-attachment-chip" style="display: none;">
-                    <i class="fa-solid fa-file-pdf"></i>
-                    <span id="aiAttachmentName">document.pdf</span>
-                    <button type="button" class="chip-remove-btn" onclick="clearAiAttachment()" title="Remove attachment">&times;</button>
-                </div>
-
-                <div class="chat-input-mega-box">
-
-                    <input type="text"
-                           id="aiQueryInput"
-                           placeholder="Ask about an Indian Standard, product certification, BIS license, hallmarking, testing or compliance...">
-
-                    <!-- Hidden file input for attachment -->
-                    <input type="file" id="aiAttachmentInput" accept=".pdf,.docx,.png,.jpg,.jpeg" style="display: none;" onchange="handleAiAttachmentSelected(event)">
-
-                    <div class="chat-input-actions">
-
-                        <button type="button" id="aiMicBtn" onclick="toggleVoiceInput(event)" title="Click to speak (English / Hindi)">
-                            <i class="fa-solid fa-microphone" id="aiMicIcon"></i>
-                        </button>
-
-                        <button type="button" id="aiAttachBtn" onclick="triggerAiAttachment(event)" title="Attach document (PDF/DOCX) for AI analysis">
-                            <i class="fa-solid fa-paperclip"></i>
-                        </button>
-
-                        <button type="button" class="submit-arrow" id="aiSubmitBtn"
-                                onclick="triggerAiChat(event)" title="Send Question">
-
-                            <i class="fa-solid fa-arrow-right"></i>
-
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <div class="suggestions-grid">
-
-                    <div class="suggestion-chip"
-                         onclick="quickQuery('Which BIS standard applies to my product?')">
-
-                        Which BIS standard applies to my product?
-
-                    </div>
-
-                    <div class="suggestion-chip"
-                         onclick="quickQuery('Explain IS 302 in simple language')">
-
-                        Explain IS 302 in simple language
-
-                    </div>
-
-                    <div class="suggestion-chip"
-                         onclick="quickQuery('How can I obtain BIS certification?')">
-
-                        How can I obtain BIS certification?
-
-                    </div>
-
-                    <div class="suggestion-chip"
-                         onclick="quickQuery('What are the requirements for electrical products?')">
-
-                        What are the requirements for electrical products?
-
-                    </div>
-
-                    <div class="suggestion-chip"
-                         onclick="quickQuery('Find testing laboratories near me')">
-
-                        Find testing laboratories near me
-
-                    </div>
-
-                    <div class="suggestion-chip"
-                         onclick="quickQuery('Which documents are required?')">
-
-                        Which documents are required?
-
-                    </div>
-
-                </div>
-
-                <!-- INLINE AI ASSISTANT RESPONSE CONTAINER -->
-                <div id="aiChatResults" class="ai-chat-results-container" style="display: none;">
-
-                    <div id="aiChatLoading" class="ai-inline-loading" style="display: none;">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
-                        <span>Searching BIS Standards and analyzing query...</span>
-                    </div>
-
-                    <div id="aiChatResultContent" class="ai-inline-result" style="display: none;">
-
-                        <div class="query-echo-bar" id="aiQueryEcho">
-                            Query will appear here
+                    <!-- User Profile Dropdown Badge -->
+                    <div class="user-profile-badge" id="userProfileBtn">
+                        <div class="avatar-circle" id="headerAvatar">
+                            RP
+                        </div>
+                        <div class="user-info-text">
+                            <span class="user-name" id="headerUserName">Dr. R. K. Prasad</span>
+                            <span class="user-role-label" id="headerUserRole">Lead Quality Inspector</span>
                         </div>
 
-                        <!-- AI DIRECT ANSWER BOX -->
-                        <div class="ai-llm-response-card" id="aiLlmResponseCard">
-                            <div class="ai-llm-header">
-                                <div class="ai-badge-gov">
-                                    <i class="fa-solid fa-shield-halved"></i>
-                                    <span>BIS Sahayak AI</span>
-                                </div>
-                                <div class="ai-source-badge" id="aiSourceBadge">
-                                    <i class="fa-solid fa-bolt"></i>
-                                    <span id="aiModelName">OpenRouter AI</span>
-                                </div>
+                        <!-- User Menu Dropdown -->
+                        <div class="user-dropdown" id="userDropdown">
+                            <div class="dropdown-item" id="btnSwitchGateway">
+                                <i class="fa-solid fa-key"></i> Gateway Login
                             </div>
-                            <div class="ai-llm-body" id="aiLlmBodyText">
-                                <!-- Injected dynamically -->
+                            <div class="dropdown-item" id="btnOpenVerification">
+                                <i class="fa-solid fa-certificate"></i> Verify License / HUID
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item danger" id="btnLogout">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Sign Out
                             </div>
                         </div>
+                    </div>
+                </div>
+            </header>
 
-                        <div class="answer-card-box" id="aiRecommendedStandardCard">
+            <!-- Main Scrollable Views Wrapper -->
+            <main class="content-area">
 
-                            <div class="answer-card-header">
-
-                                <div class="rec-badge-left">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                    Recommended Standard
-                                </div>
-
-                                <div class="confidence-badge" id="aiConfidenceBadge">
-                                    <i class="fa-solid fa-gauge-high"></i>
-                                    Confidence: 95%
-                                </div>
-
-                            </div>
-
-                            <h2 id="aiStandardNumber">IS Number</h2>
-
-                            <p class="std-subtitle" id="aiStandardTitle">
-                                Standard Title
-                            </p>
-
-                            <p class="std-desc-text" id="aiStandardDesc">
-                                Standard Description
-                            </p>
-
-                            <div class="card-action-bar">
-
-                                <button type="button" class="primary-btn" id="aiViewStandardBtn" onclick="switchView('standards')">
-                                    <i class="fa-regular fa-eye"></i>
-                                    View in Standards Explorer
+                <!-- ========================================================
+                     VIEW 1: HOME / LANDING (Pages 1, 9, 17)
+                     ======================================================== -->
+                <section class="view-section active" id="view-landing">
+                    <!-- Hero Section Grid -->
+                    <div class="home-hero-grid">
+                        <!-- Left Hero Banner -->
+                        <div class="hero-main-card">
+                            <span class="hero-project-pill">Smart India Hackathon Project</span>
+                            <h1>Simplifying BIS Compliance with AI Intelligence</h1>
+                            <p>Verify ISI Marks, instantly search 10,000+ Indian Standards, analyze product manuals for hallmark compatibility, and streamline your certification workflows in one unified portal.</p>
+                            <div class="hero-actions">
+                                <button class="btn btn-dark" id="heroCtaQuery">
+                                    Query Indian Standards Now <i class="fa-solid fa-chevron-right" style="font-size: 0.8rem;"></i>
                                 </button>
-
-                                <button type="button" class="outline-btn" onclick="switchView('compliance')">
-                                    <i class="fa-solid fa-clipboard-check"></i>
-                                    Check Compliance
+                                <button class="btn btn-outline" id="heroCtaWalkthrough">
+                                    Watch Walkthrough <i class="fa-regular fa-circle-play"></i>
                                 </button>
+                            </div>
+                        </div>
 
-                                <button type="button" class="secondary-btn" onclick="clearAiChatResult()">
-                                    <i class="fa-solid fa-rotate-left"></i>
-                                    New Question
-                                </button>
-
+                        <!-- Right Coverage Snapshot Widget -->
+                        <div class="coverage-snapshot-card">
+                            <div class="coverage-header">
+                                <div>
+                                    <h3>Standards Coverage</h3>
+                                    <p>Enterprise readiness snapshot</p>
+                                </div>
+                                <span class="badge badge-success">AI READY</span>
                             </div>
 
-                            <div class="sub-metrics-row">
-
-                                <div>
-                                    <span>Certification Type</span>
-                                    <strong id="aiMetricCert">Product Certification</strong>
-                                </div>
-
-                                <div>
-                                    <span>Category</span>
-                                    <strong id="aiMetricCat">Electrical</strong>
-                                </div>
-
-                                <div>
-                                    <span>Status</span>
-                                    <strong id="aiMetricStatus">Active</strong>
-                                </div>
-
-                                <div>
-                                    <span>Source</span>
-                                    <strong id="aiMetricSource">BIS Knowledge Base</strong>
-                                </div>
-
+                            <!-- Styled Vertical Visual Bars -->
+                            <div class="bars-visual">
+                                <div class="bar-col h1" title="Q1 Readiness"></div>
+                                <div class="bar-col h2" title="Q2 Readiness"></div>
+                                <div class="bar-col h3" title="Q3 Readiness"></div>
+                                <div class="bar-col h4" title="Q4 Readiness"></div>
                             </div>
 
+                            <div class="coverage-metrics-row">
+                                <div class="cov-metric-item">
+                                    <h4>Active audits</h4>
+                                    <span id="homeAuditsCount">128</span>
+                                </div>
+                                <div class="cov-metric-item" style="text-align: right;">
+                                    <h4>AI confidence</h4>
+                                    <span>99.2%</span>
+                                </div>
+                            </div>
                         </div>
-
                     </div>
 
-                </div>
-
-            </div>
-
-
-        </section>
-
-
-
-        <!-- VIEW 3: AI RESPONSE -->
-        <section id="ai-response"
-                 class="app-view">
-
-            <div class="query-echo-bar">
-                Which BIS standard applies to LED street light?
-            </div>
-
-
-            <div class="answer-card-box">
-
-                <div class="answer-card-header">
-
-                    <div class="rec-badge-left">
-                        <i class="fa-solid fa-circle-check"></i>
-                        Recommended Standard
-                    </div>
-
-                    <div class="confidence-badge">
-                        <i class="fa-solid fa-gauge-high"></i>
-                        Confidence: 92%
-                    </div>
-
-                </div>
-
-
-                <h2>IS 10322 : 2012</h2>
-
-                <p class="std-subtitle">
-                    LED Luminaires for General Lighting Purposes –
-                    Safety Requirements
-                </p>
-
-
-                <div class="tab-filters-row">
-
-                    <button class="filter-tab active">
-                        Overview
-                    </button>
-
-                    <button class="filter-tab">
-                        Requirements
-                    </button>
-
-                    <button class="filter-tab">
-                        Testing
-                    </button>
-
-                    <button class="filter-tab">
-                        Certification
-                    </button>
-
-                </div>
-
-
-                <p class="std-desc-text">
-
-                    This standard specifies the safety requirements
-                    for LED luminaires used in general lighting applications
-                    including street lighting.
-
-                </p>
-
-
-                <div class="card-action-bar">
-
-                    <button class="primary-btn">
-
-                        <i class="fa-regular fa-eye"></i>
-                        View Standard
-
-                    </button>
-
-
-                    <button class="secondary-btn">
-
-                        <i class="fa-solid fa-download"></i>
-                        Download Summary
-
-                    </button>
-
-
-                    <button class="outline-btn"
-                            onclick="switchView('compliance')">
-
-                        <i class="fa-solid fa-clipboard-check"></i>
-                        Check Compliance
-
-                    </button>
-
-                </div>
-
-
-                <div class="sub-metrics-row">
-
-                    <div>
-                        <span>BIS Services</span>
-                        <strong>Product Certification</strong>
-                    </div>
-
-                    <div>
-                        <span>Required Documents</span>
-                        <strong>5 Documents</strong>
-                    </div>
-
-                    <div>
-                        <span>Compliance Checklist</span>
-                        <strong>8 Key Points</strong>
-                    </div>
-
-                    <div>
-                        <span>Source</span>
-                        <strong>BIS Official Document</strong>
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 4: STANDARDS SEARCH -->
-        <section id="standards"
-                 class="app-view">
-
-            <div class="page-title-box">
-
-                <h2>Find the Right Indian Standard</h2>
-
-                <p>
-                    Search by product, IS number, category or keyword
-                </p>
-
-            </div>
-
-
-            <div class="search-filter-toolbar">
-
-                <div class="main-search-input-wrap">
-
-                    <i class="fa-solid fa-magnifying-glass"></i>
-
-                    <input type="text"
-                           id="standardsSearchInput"
-                           placeholder="Search for product, IS number, category, or keyword...">
-
-                    <button type="button" class="search-submit-btn" id="standardsSearchBtn" onclick="applyStandardsFilters()">
-
-                        <i class="fa-solid fa-arrow-right"></i>
-
-                    </button>
-
-                </div>
-
-
-                <div class="filter-dropdowns">
-
-                    <select id="filterCategory" onchange="applyStandardsFilters()">
-                        <option value="">All Categories</option>
-                        <option value="Electrical">Electrical</option>
-                        <option value="Electrical Appliances">Electrical Appliances</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="Civil">Civil & Construction</option>
-                        <option value="Mechanical">Mechanical</option>
-                        <option value="Chemical">Chemical</option>
-                        <option value="Food & Agriculture">Food & Agriculture</option>
-                        <option value="Textiles">Textiles & PPE</option>
-                    </select>
-
-                    <select id="filterIndustry" onchange="applyStandardsFilters()">
-                        <option value="">All Industries</option>
-                        <option value="Lighting">Lighting</option>
-                        <option value="Consumer Electronics">Consumer Electronics</option>
-                        <option value="Construction">Construction</option>
-                        <option value="Consumer Goods">Consumer Goods</option>
-                        <option value="Food & Beverages">Food & Beverages</option>
-                        <option value="Power & Transmission">Power & Transmission</option>
-                        <option value="Manufacturing">Manufacturing</option>
-                        <option value="Infrastructure & Roads">Infrastructure & Roads</option>
-                        <option value="Information Technology">Information Technology</option>
-                    </select>
-
-                    <select id="filterYear" onchange="applyStandardsFilters()">
-                        <option value="">All Years</option>
-                        <option value="2024">2024</option>
-                        <option value="2023">2023</option>
-                        <option value="2022">2022</option>
-                        <option value="2020">2020</option>
-                        <option value="2019">2019</option>
-                        <option value="2018">2018</option>
-                        <option value="2016">2016</option>
-                        <option value="2015">2015</option>
-                        <option value="2012">2012</option>
-                        <option value="2010">2010</option>
-                        <option value="2008">2008</option>
-                        <option value="2000">2000</option>
-                    </select>
-
-                    <select id="filterStatus" onchange="applyStandardsFilters()">
-                        <option value="">All Statuses</option>
-                        <option value="Active">Active</option>
-                        <option value="Under Revision">Under Revision</option>
-                        <option value="Withdrawn">Withdrawn</option>
-                    </select>
-
-                    <select id="filterType" onchange="applyStandardsFilters()">
-                        <option value="">All Certification Types</option>
-                        <option value="Product Certification">Product Certification</option>
-                        <option value="Compulsory Registration">Compulsory Registration</option>
-                        <option value="Voluntary">Voluntary</option>
-                    </select>
-
-                </div>
-
-            </div>
-
-
-            <div class="results-meta-bar">
-
-                <span id="standardsCountBadge">
-                    Results <b>(Loading...)</b>
-                </span>
-
-                <div class="sort-box">
-                    <label for="standardsSort">Sort by:</label>
-                    <select id="standardsSort" onchange="applyStandardsFilters()">
-                        <option value="relevance">Relevance</option>
-                        <option value="newest">Newest First</option>
-                        <option value="oldest">Oldest First</option>
-                        <option value="title_asc">Title (A - Z)</option>
-                        <option value="title_desc">Title (Z - A)</option>
-                        <option value="is_number">IS Number</option>
-                    </select>
-                </div>
-
-            </div>
-
-
-            <div class="standard-list-container" id="standardsListContainer">
-
-                <div class="standard-row-card"
-                     onclick="switchView('ai-response')">
-
-                    <div class="std-info-left">
-
-                        <h4>
-                            IS 10322 : 2012
-                        </h4>
-
-                        <p>
-                            LED Luminaires for General Lighting Purposes –
-                            Safety Requirements
-                        </p>
-
-                        <div class="tags-row">
-
-                            <span class="tag electrical">
-                                Electrical
-                            </span>
-
-                            <span class="tag active">
-                                Active
-                            </span>
-
-                            <span class="tag mandatory">
-                                Mandatory
-                            </span>
-
+                    <!-- 4 Metric Cards Row -->
+                    <div class="stats-four-grid">
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top">
+                                <i class="fa-regular fa-clone stat-icon"></i>
+                                <span class="stat-tag">Updated</span>
+                            </div>
+                            <h3 id="statTotalStandards">10,000+ Standards</h3>
+                            <p>Cataloged Indian Standards (IS)</p>
                         </div>
-
-                    </div>
-
-
-                    <button class="text-link-btn">
-
-                        View Details
-                        <i class="fa-solid fa-arrow-right"></i>
-
-                    </button>
-
-                </div>
-
-
-                <div class="standard-row-card">
-
-                    <div class="std-info-left">
-
-                        <h4>
-                            IS 302 (Part 1) : 2024
-                        </h4>
-
-                        <p>
-                            Safety of Household Electrical Appliances
-                        </p>
-
-                        <div class="tags-row">
-
-                            <span class="tag electrical">
-                                Electrical Appliances
-                            </span>
-
-                            <span class="tag active">
-                                Active
-                            </span>
-
-                            <span class="tag mandatory">
-                                Mandatory
-                            </span>
-
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top">
+                                <i class="fa-solid fa-layer-group stat-icon"></i>
+                                <span class="stat-tag">Verified</span>
+                            </div>
+                            <h3 id="statTotalServices">500+ BIS Services</h3>
+                            <p>Instant compliance verification tools</p>
                         </div>
-
-                    </div>
-
-
-                    <button class="text-link-btn">
-
-                        View Details
-                        <i class="fa-solid fa-arrow-right"></i>
-
-                    </button>
-
-                </div>
-
-
-                <div class="standard-row-card">
-
-                    <div class="std-info-left">
-
-                        <h4>
-                            IS 456 : 2000
-                        </h4>
-
-                        <p>
-                            Plain and Reinforced Concrete –
-                            Code of Practice
-                        </p>
-
-                        <div class="tags-row">
-
-                            <span class="tag civil">
-                                Civil Engineering
-                            </span>
-
-                            <span class="tag active">
-                                Active
-                            </span>
-
-                            <span class="tag voluntary">
-                                Voluntary
-                            </span>
-
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top">
+                                <i class="fa-regular fa-circle-check stat-icon"></i>
+                                <span class="stat-tag">Verified</span>
+                            </div>
+                            <h3>99.2% Accuracy</h3>
+                            <p>Industry trusted AI legal parsing</p>
                         </div>
-
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top">
+                                <i class="fa-solid fa-headset stat-icon"></i>
+                                <span class="stat-tag">24/7 AI POWERED</span>
+                            </div>
+                            <h3>24/7 AI Assistance</h3>
+                            <p>Continuous helper chatbot</p>
+                        </div>
                     </div>
 
-
-                    <button class="text-link-btn">
-
-                        View Details
-                        <i class="fa-solid fa-arrow-right"></i>
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 5: BIS SERVICES -->
-        <section id="services"
-                 class="app-view">
-
-            <div class="page-title-box">
-
-                <h2>BIS Services</h2>
-
-                <p>
-                    Explore all BIS services for industries and consumers
-                </p>
-
-            </div>
-
-
-            <div class="services-search-bar">
-
-                <i class="fa-solid fa-magnifying-glass"></i>
-
-                <input type="text"
-                       placeholder="Search services...">
-
-            </div>
-
-
-            <div class="services-grid">
-
-                <div class="service-card" onclick="openServiceModal('product_certification')">
-                    <i class="fa-solid fa-certificate"></i>
-                    <h4>Product Certification (ISI Mark)</h4>
-                    <p>Ensure product quality and consumer safety under Scheme-I</p>
-                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('product_certification')">
-                        Learn More
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="service-card" onclick="openServiceModal('hallmarking')">
-                    <i class="fa-solid fa-gem"></i>
-                    <h4>Hallmarking of Precious Metals</h4>
-                    <p>Trust in precious gold & silver with 6-digit HUID</p>
-                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('hallmarking')">
-                        Learn More
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="service-card" onclick="openServiceModal('lab_recognition')">
-                    <i class="fa-solid fa-flask"></i>
-                    <h4>Laboratory Recognition (LRS)</h4>
-                    <p>Accredited testing facilities powering quality verification</p>
-                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('lab_recognition')">
-                        Learn More
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="service-card" onclick="openServiceModal('crs')">
-                    <i class="fa-solid fa-file-signature"></i>
-                    <h4>Compulsory Registration (CRS)</h4>
-                    <p>Self-declaration of conformity for Electronics & IT goods</p>
-                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('crs')">
-                        Learn More
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="service-card" onclick="openServiceModal('standards')">
-                    <i class="fa-solid fa-book-bookmark"></i>
-                    <h4>Standards Formulation</h4>
-                    <p>Access the comprehensive repository of Indian Standards</p>
-                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('standards')">
-                        Learn More
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-
-                <div class="service-card" onclick="openServiceModal('training')">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                    <h4>Training & Capacity (NITS)</h4>
-                    <p>National Institute of Training for Standardization programs</p>
-                    <button type="button" class="service-learn-btn" onclick="event.stopPropagation(); openServiceModal('training')">
-                        Learn More
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
-                </div>
-
-            </div>
-
-            <!-- SERVICE DETAILS MODAL -->
-            <div id="serviceDetailsModal" class="service-modal-backdrop" style="display: none;" onclick="closeServiceModal()">
-                <div class="service-modal-dialog" onclick="event.stopPropagation()">
-                    <div class="service-modal-header">
-                        <div class="modal-title-wrap">
-                            <i id="svcModalIcon" class="fa-solid fa-certificate"></i>
+                    <!-- Explore Core AI Toolkits Section -->
+                    <div class="toolkits-header">
+                        <h2 class="section-title">Explore Core AI Toolkits</h2>
+                    </div>
+                    <div class="toolkits-grid">
+                        <!-- Card 1: AI Standard Finder -->
+                        <div class="toolkit-card" id="toolkitAiFinder">
                             <div>
-                                <h3 id="svcModalTitle">Service Title</h3>
-                                <span id="svcModalSubtitle">Service Subtitle</span>
-                            </div>
-                        </div>
-                        <button type="button" class="modal-close-btn" onclick="closeServiceModal()">&times;</button>
-                    </div>
-                    <div class="service-modal-body">
-                        <div class="svc-section">
-                            <h4>Overview</h4>
-                            <p id="svcModalOverview"></p>
-                        </div>
-                        <div class="svc-section">
-                            <h4>Key Features & Benefits</h4>
-                            <ul id="svcModalFeatures"></ul>
-                        </div>
-                        <div class="svc-section">
-                            <h4>Application Workflow</h4>
-                            <ol id="svcModalWorkflow"></ol>
-                        </div>
-                        <div class="svc-section">
-                            <h4>Required Documentation</h4>
-                            <ul id="svcModalDocs"></ul>
-                        </div>
-                    </div>
-                    <div class="service-modal-footer">
-                        <a id="svcModalPortalLink" href="https://www.services.bis.gov.in" target="_blank" rel="noopener noreferrer" class="primary-btn">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                            Visit Official Portal
-                        </a>
-                        <button type="button" class="secondary-btn" onclick="closeServiceModal()">Close</button>
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 6: COMPLIANCE CHECKER -->
-        <section id="compliance"
-                 class="app-view">
-
-            <div class="stepper-header">
-
-                <div class="step-item completed">
-                    <span>1</span>
-                    Product
-                </div>
-
-                <div class="step-line"></div>
-
-                <div class="step-item active">
-                    <span>2</span>
-                    Details
-                </div>
-
-                <div class="step-line"></div>
-
-                <div class="step-item">
-                    <span>3</span>
-                    Standard
-                </div>
-
-                <div class="step-line"></div>
-
-                <div class="step-item">
-                    <span>4</span>
-                    Documents
-                </div>
-
-                <div class="step-line"></div>
-
-                <div class="step-item">
-                    <span>5</span>
-                    Analysis
-                </div>
-
-            </div>
-
-
-            <div class="stepper-card-body">
-
-                <div class="form-group-box">
-
-                    <h3>
-                        Product Information
-                    </h3>
-
-                    <p>
-                        Tell the AI about the product you want to check.
-                    </p>
-
-
-                    <label>
-                        Product Name
-                    </label>
-
-                    <input
-                        id="complianceProduct"
-                        class="wide-input"
-                        type="text"
-                        placeholder="Example: LED Street Light"
-                    >
-
-
-                    <label>
-                        Applicable BIS Standard
-                    </label>
-
-                    <input
-                        id="complianceStandard"
-                        class="wide-input"
-                        type="text"
-                        placeholder="Example: IS 10322 : 2012"
-                    >
-
-                </div>
-
-
-                <div class="stepper-buttons-row">
-
-                    <button
-                        class="secondary-btn"
-                        onclick="switchView('ai-chat')"
-                    >
-
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Back to AI
-
-                    </button>
-
-
-                    <button
-                        class="primary-btn"
-                        onclick="runComplianceCheck()"
-                    >
-
-                        Analyze Compliance
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-
-                    </button>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 7: DOCUMENT INTELLIGENCE -->
-        <section id="document"
-                 class="app-view">
-
-            <div class="doc-upload-container">
-
-                <h2>
-                    Upload BIS Document
-                </h2>
-
-                <p class="doc-upload-desc">
-                    Upload your product specification, test reports, or standard documentation (PDF / DOCX) for automated compliance analysis, requirement extraction, and violation detection.
-                </p>
-
-                <div class="dropzone-box"
-                     id="documentDropzone">
-
-                    <div id="dropzoneIdleState">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-
-                        <h4>
-                            Drag & drop your BIS document here
-                        </h4>
-
-                        <span>
-                            or click to browse
-                        </span>
-
-                        <small>
-                            PDF, DOCX • Maximum 20MB
-                        </small>
-                    </div>
-
-                    <div id="dropzoneLoadingState" style="display: none;">
-                        <i class="fa-solid fa-spinner fa-spin doc-spinner"></i>
-                        <h4 id="dropzoneLoadingTitle">Analyzing Document...</h4>
-                        <span id="dropzoneLoadingSubtitle">Extracting text, requirements & checking compliance</span>
-                    </div>
-
-                </div>
-
-
-                <div class="upload-footer-row">
-
-                    <div class="recent-tag" id="docCurrentFileTag">
-
-                        <i class="fa-regular fa-file-lines" id="docCurrentFileIcon"></i>
-
-                        <span id="docCurrentFileName">
-                            No document uploaded yet
-                        </span>
-
-                        <span id="docCurrentFileMeta" style="display: none;"></span>
-
-                    </div>
-
-                    <button
-                        type="button"
-                        class="primary-btn"
-                        id="docAnalyzeBtn"
-                        onclick="summarizeDocument(event)"
-                    >
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        Analyze Document
-                    </button>
-
-                </div>
-
-                <!-- DOCUMENT INTELLIGENCE RESULTS -->
-                <div id="documentAnalysisResults" class="doc-intelligence-results" style="display: none;">
-
-                    <!-- 1. OVERVIEW & SUMMARY -->
-                    <div class="doc-card doc-summary-card">
-                        <div class="doc-card-header">
-                            <div class="doc-card-title">
-                                <i class="fa-solid fa-file-invoice"></i>
-                                <h3>Document Overview & Summary</h3>
-                            </div>
-                            <span class="badge-tag processed" id="docStatusBadge">PROCESSED</span>
-                        </div>
-
-                        <div class="doc-meta-grid" id="docMetaGrid">
-                            <div class="doc-meta-item">
-                                <span>Product</span>
-                                <strong id="docMetaProduct">-</strong>
-                            </div>
-                            <div class="doc-meta-item">
-                                <span>Reference Standard</span>
-                                <strong id="docMetaStandard">-</strong>
-                            </div>
-                            <div class="doc-meta-item">
-                                <span>Manufacturer</span>
-                                <strong id="docMetaManufacturer">-</strong>
-                            </div>
-                            <div class="doc-meta-item">
-                                <span>Model / Type</span>
-                                <strong id="docMetaModel">-</strong>
-                            </div>
-                        </div>
-
-                        <div class="doc-summary-box">
-                            <h4>AI Structured Summary</h4>
-                            <p id="docSummaryText"></p>
-                        </div>
-                    </div>
-
-                    <!-- 2. COMPLIANCE ANALYSIS CARD -->
-                    <div class="doc-card doc-compliance-card">
-                        <div class="doc-card-header">
-                            <div class="doc-card-title">
-                                <i class="fa-solid fa-shield-halved"></i>
-                                <h3>Compliance Analysis</h3>
-                            </div>
-                            <span class="risk-badge" id="docRiskBadge">RISK: LOW</span>
-                        </div>
-
-                        <div class="compliance-score-dashboard">
-                            <div class="compliance-gauge-wrapper">
-                                <div class="score-circle-large" id="docScoreCircle">
-                                    <span id="docScoreNum">80</span>%
+                                <div class="toolkit-top">
+                                    <div class="toolkit-icon-box">
+                                        <i class="fa-solid fa-magnifying-glass"></i>
+                                    </div>
+                                    <i class="fa-solid fa-arrow-up-right-from-square toolkit-arrow"></i>
                                 </div>
-                                <div class="gauge-label">
-                                    <strong id="docVerdictText">Likely Compliant</strong>
-                                    <span>Overall BIS Compliance Rating</span>
+                                <div class="toolkit-content">
+                                    <h3>AI Standard Finder</h3>
+                                    <p>Locate exact Indian Standards for your raw materials or finished products using conversational natural language descriptions.</p>
                                 </div>
                             </div>
+                            <span class="toolkit-action">Try Chat Search &rarr;</span>
+                        </div>
 
-                            <div class="compliance-stats-boxes">
-                                <div class="c-stat-box">
-                                    <span class="c-num" id="docTotalReqsCount">10</span>
-                                    <span class="c-lbl">Total Requirements</span>
+                        <!-- Card 2: Document Compliance Analyzer -->
+                        <div class="toolkit-card" id="toolkitDocAnalyzer">
+                            <div>
+                                <div class="toolkit-top">
+                                    <div class="toolkit-icon-box">
+                                        <i class="fa-regular fa-file-lines"></i>
+                                    </div>
+                                    <i class="fa-solid fa-arrow-up-right-from-square toolkit-arrow"></i>
                                 </div>
-                                <div class="c-stat-box pass">
-                                    <span class="c-num" id="docPassedReqsCount">8</span>
-                                    <span class="c-lbl">Requirements Passed</span>
+                                <div class="toolkit-content">
+                                    <h3>Document Compliance Analyzer</h3>
+                                    <p>Upload manuals, technical files, or spec sheets to automatically screen requirements against current BIS codes and find gap warnings.</p>
                                 </div>
-                                <div class="c-stat-box fail">
-                                    <span class="c-num" id="docFailedReqsCount">2</span>
-                                    <span class="c-lbl">Requirements Failed</span>
+                            </div>
+                            <span class="toolkit-action">Run Analysis &rarr;</span>
+                        </div>
+
+                        <!-- Card 3: Hallmark Verification -->
+                        <div class="toolkit-card" id="toolkitHallmark">
+                            <div>
+                                <div class="toolkit-top">
+                                    <div class="toolkit-icon-box">
+                                        <i class="fa-solid fa-certificate"></i>
+                                    </div>
+                                    <i class="fa-solid fa-arrow-up-right-from-square toolkit-arrow"></i>
+                                </div>
+                                <div class="toolkit-content">
+                                    <h3>Hallmark Verification</h3>
+                                    <p>Validate laser-etched HUID codes on gold and silver articles directly via the official database gateway to avoid counterfeit goods.</p>
+                                </div>
+                            </div>
+                            <span class="toolkit-action">Verify Stamp &rarr;</span>
+                        </div>
+                    </div>
+
+                    <!-- Lower Split Grid: Recent Audit & Activity Log + Quickstart Guide -->
+                    <div class="home-split-grid">
+                        <!-- Left: Recent Activity Log -->
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 class="section-title">Recent Audit & Activity Log</h3>
+                                <span class="badge badge-primary">Live Feed</span>
+                            </div>
+                            <div class="activity-feed-list" id="homeActivityFeed">
+                                <div class="activity-feed-item">
+                                    <div class="feed-item-left">
+                                        <span class="feed-title">HUID gold verified successfully</span>
+                                        <span class="feed-meta">HUID HG3421 • 2 hours ago</span>
+                                    </div>
+                                    <span class="badge badge-success">Compliant</span>
+                                </div>
+                                <div class="activity-feed-item">
+                                    <div class="feed-item-left">
+                                        <span class="feed-title">Steel Pipe manual analysed against IS 1239</span>
+                                        <span class="feed-meta">Document ID #922 • 1 day ago</span>
+                                    </div>
+                                    <span class="badge badge-warning">Partially Compliant</span>
+                                </div>
+                                <div class="activity-feed-item">
+                                    <div class="feed-item-left">
+                                        <span class="feed-title">AI search query for cement specifications</span>
+                                        <span class="feed-meta">Searched IS 1489 Part 1 • 2 days ago</span>
+                                    </div>
+                                    <span class="badge badge-neutral">Completed</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Compliance Quick-start Guide -->
+                        <div class="card">
+                            <h3 class="section-title">Compliance Quick-start Guide</h3>
+                            <div class="quickstart-steps">
+                                <div class="step-card">
+                                    <div class="step-num">1</div>
+                                    <div class="step-body">
+                                        <h4>Select standard domain</h4>
+                                        <p>Choose electrical, mechanical, metallurgy or chemical standards.</p>
+                                    </div>
+                                </div>
+                                <div class="step-card">
+                                    <div class="step-num">2</div>
+                                    <div class="step-body">
+                                        <h4>Use AI Document extraction</h4>
+                                        <p>Upload product catalogue to parse dimensions and safety grades.</p>
+                                    </div>
+                                </div>
+                                <div class="step-card">
+                                    <div class="step-num">3</div>
+                                    <div class="step-body">
+                                        <h4>Request certified lab feedback</h4>
+                                        <p>Directly trigger compliance audit form requests based on AI gap charts.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 3. VIOLATIONS & NON-COMPLIANCE GAPS -->
-                    <div class="doc-card doc-violations-card" id="docViolationsSection">
-                        <div class="doc-card-header">
-                            <div class="doc-card-title">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                                <h3>Violations & Compliance Gaps</h3>
-                            </div>
-                            <span class="badge-tag warning" id="docViolationsCountBadge">2 Issues Detected</span>
+
+                <!-- ========================================================
+                     VIEW 2: AI ASSISTANT / AI STANDARD FINDER (Pages 2, 10, 18)
+                     ======================================================== -->
+                <section class="view-section" id="view-ai-chat">
+                    <div class="ai-view-layout">
+                        <!-- Top Active Subject Context Bar -->
+                        <div class="ai-context-banner">
+                            <span class="ai-context-dot"></span>
+                            <span id="activeAiContextText">Current Subject Context: IS 1239 (Mild Steel Tubes, Tubulars and Other Wrought Steel Fittings)</span>
                         </div>
 
-                        <div class="violations-list" id="docViolationsList">
-                            <!-- Injected dynamically -->
+                        <!-- Main Chat Workspace Grid -->
+                        <div class="ai-main-grid">
+                            <!-- Left History Sidebar -->
+                            <div class="ai-history-panel">
+                                <button class="btn btn-primary new-query-btn" id="btnNewAiChat">
+                                    <i class="fa-solid fa-plus"></i> New Compliance Query
+                                </button>
+                                <span class="history-list-title">Past Conversations</span>
+                                <div class="past-queries-list" id="aiPastConversations">
+                                    <div class="past-query-item" onclick="loadPromptQuery('Steel Pipe IS 1239 requirements')">
+                                        <i class="fa-regular fa-message"></i> Steel Pipe IS 1239 requirements
+                                    </div>
+                                    <div class="past-query-item" onclick="loadPromptQuery('Gold Hallmark rules in Delhi')">
+                                        <i class="fa-regular fa-message"></i> Gold Hallmark rules in Delhi
+                                    </div>
+                                    <div class="past-query-item" onclick="loadPromptQuery('Polyethylene packaging standards')">
+                                        <i class="fa-regular fa-message"></i> Polyethylene packaging standards
+                                    </div>
+                                    <div class="past-query-item" onclick="loadPromptQuery('Domestic electrical switches ISI')">
+                                        <i class="fa-regular fa-message"></i> Domestic electrical switches ISI
+                                    </div>
+                                    <div class="past-query-item" onclick="loadPromptQuery('Audit criteria cement flyash')">
+                                        <i class="fa-regular fa-message"></i> Audit criteria cement flyash
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right Chat Feed & Input -->
+                            <div class="ai-chat-stage">
+                                <div class="chat-messages-container" id="chatFeed">
+                                    <!-- User Message Sample -->
+                                    <div class="chat-bubble user">
+                                        <div class="chat-avatar">RP</div>
+                                        <div class="bubble-content">
+                                            I need to verify if our cold-drawn carbon steel pipe batch conforms to the outer diameter thickness specified in Indian Standards. Which is the applicable code and the safety limit?
+                                        </div>
+                                    </div>
+
+                                    <!-- Bot Response Sample -->
+                                    <div class="chat-bubble bot">
+                                        <div class="chat-avatar"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+                                        <div class="bubble-content">
+                                            Based on your requirements, the primary Indian Standard is <strong>IS 1239 (Part 1): 2004</strong> which covers Mild Steel Tubes, Tubulars, and other Wrought Steel Fittings. Below is the parsed result card and specific tolerances:
+
+                                            <!-- Embedded Standard Result Card -->
+                                            <div class="embedded-standard-card">
+                                                <div class="std-card-top">
+                                                    <span class="std-code-tag">IS 1239 : Part 1</span>
+                                                    <span class="badge badge-success">95% Match</span>
+                                                </div>
+                                                <div class="std-title">Mild Steel Tubes, Tubulars and Other Wrought Steel Fittings - Part 1: Steel Tubes</div>
+                                                <div class="std-desc">This standard specifies requirements for welded and seamless, screwed and socketed, and plain end mild steel tubes for water, non-hazardous gas, air, and steam. Specifies OD limit tolerances of +10% to -10%.</div>
+                                                <div class="std-meta-tags">
+                                                    <span class="meta-pill">Category: Metallurgy</span>
+                                                    <span class="meta-pill">Source: BIS Gazette 2019</span>
+                                                    <span class="meta-pill">License: Mandatory ISI Mark</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Input Box Area -->
+                                <div class="chat-input-bar">
+                                    <div id="attachedFileChip" style="display: none;" class="chat-attachment-pill">
+                                        <i class="fa-solid fa-paperclip"></i>
+                                        <span id="attachedFileName">document.pdf</span>
+                                        <i class="fa-solid fa-xmark" style="cursor: pointer;" onclick="clearAiAttachment()"></i>
+                                    </div>
+                                    <form id="aiChatForm" class="chat-input-wrapper" onsubmit="handleAiChatSubmit(event)">
+                                        <input type="file" id="aiDocAttachInput" style="display: none;" accept=".pdf,.docx,.png,.jpg,.jpeg">
+                                        <button type="button" class="chat-action-btn" id="btnAttachDoc" title="Attach Document Context">
+                                            <i class="fa-solid fa-paperclip"></i>
+                                        </button>
+                                        <button type="button" class="chat-action-btn" id="btnVoiceQuery" title="Voice Input">
+                                            <i class="fa-solid fa-microphone"></i>
+                                        </button>
+                                        <input type="text" id="aiQueryInput" placeholder="Ask BIS Sahayak standard finder... (e.g. Can you extract chemical limits for cement?)" autocomplete="off">
+                                        <button type="submit" class="chat-send-btn" id="btnSendQuery">
+                                            <i class="fa-solid fa-paper-plane"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ========================================================
+                     VIEW 3: DOCUMENT INTELLIGENCE / GAP ANALYZER (Pages 3, 11, 19)
+                     ======================================================== -->
+                <section class="view-section" id="view-document">
+                    <!-- Upload Dropzone -->
+                    <div class="doc-upload-box" id="docDropzone">
+                        <input type="file" id="docFileInput" style="display: none;" accept=".pdf,.docx,.png,.jpg,.jpeg">
+                        <i class="fa-solid fa-cloud-arrow-up doc-upload-icon"></i>
+                        <h3>Analyze Product Specification Manual</h3>
+                        <p>Drop PDF, DOCX or images here, or browse. Standard verification starts automatically.</p>
+                        <button type="button" class="btn btn-primary" id="btnBrowseFiles">
+                            Browse files
+                        </button>
+                        <div class="format-tags-row">
+                            PDF • DOCX • PNG • JPG
                         </div>
                     </div>
 
-                    <!-- 4. ACTIONABLE AI RECOMMENDATIONS -->
-                    <div class="doc-card doc-recommendations-card">
-                        <div class="doc-card-header">
-                            <div class="doc-card-title">
-                                <i class="fa-solid fa-lightbulb"></i>
-                                <h3>Actionable Recommendations</h3>
+                    <!-- Analysis Output Container -->
+                    <div class="analysis-results-grid" id="analysisOutputSection">
+                        <!-- Left Column: Score & Specifications -->
+                        <div>
+                            <!-- Score Card -->
+                            <div class="card score-card" style="margin-bottom: 20px;">
+                                <h3 class="section-title">Product Compliance Score</h3>
+                                <div class="circle-gauge-wrap">
+                                    <svg viewBox="0 0 100 100">
+                                        <circle class="gauge-bg" cx="50" cy="50" r="40"></circle>
+                                        <circle class="gauge-fill" id="gaugeCircle" cx="50" cy="50" r="40" stroke-dasharray="251.2" stroke-dashoffset="55.2"></circle>
+                                    </svg>
+                                    <div class="gauge-inner-text">
+                                        <span class="gauge-score" id="displayScore">78%</span>
+                                        <span class="gauge-label">SCORE</span>
+                                    </div>
+                                </div>
+                                <span class="badge badge-warning" id="displayVerdict" style="padding: 6px 14px; font-size: 0.82rem;">Verdict: Partially Compliant</span>
                             </div>
-                            <span class="badge-tag info">BIS Roadmap</span>
+
+                            <!-- Extracted Specifications Card -->
+                            <div class="card">
+                                <h3 class="section-title">Extracted Specifications</h3>
+                                <div class="specs-list" id="extractedSpecsList">
+                                    <div class="spec-row">
+                                        <span class="spec-key">Product Name</span>
+                                        <span class="spec-val" id="specProductName">Cold-Rolled Carbon Tubes</span>
+                                    </div>
+                                    <div class="spec-row">
+                                        <span class="spec-key">Manufacturer</span>
+                                        <span class="spec-val" id="specManufacturer">Tata Quality Castings</span>
+                                    </div>
+                                    <div class="spec-row">
+                                        <span class="spec-key">Model Code</span>
+                                        <span class="spec-val" id="specModelCode">CRC-PIPE-1239</span>
+                                    </div>
+                                    <div class="spec-row">
+                                        <span class="spec-key">Detected Code</span>
+                                        <span class="spec-val" id="specDetectedCode">IS 1239 Part 1 (2004)</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="recommendations-container" id="docRecommendationsList">
-                            <!-- Injected dynamically -->
+                        <!-- Right Column: Requirements Grid & Recommendations -->
+                        <div>
+                            <!-- Requirements Grid Card -->
+                            <div class="card" style="margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                    <h3 class="section-title">Parsed Standard Requirements Grid</h3>
+                                    <span class="complaints-counter-text" id="checklistCounter">Total Checklist: 15 (12 passed, 3 failed)</span>
+                                </div>
+                                <div id="requirementsList">
+                                    <div class="req-item">
+                                        <div class="req-left">
+                                            <i class="fa-solid fa-circle-check req-status-icon pass"></i>
+                                            <div>
+                                                <div class="req-title">Chemical limit check: Carbon (0.20% max)</div>
+                                                <div class="req-extract">Extracted: 0.18% in sample steel</div>
+                                            </div>
+                                        </div>
+                                        <span class="badge badge-success">Pass</span>
+                                    </div>
+                                    <div class="req-item">
+                                        <div class="req-left">
+                                            <i class="fa-solid fa-triangle-exclamation req-status-icon fail"></i>
+                                            <div>
+                                                <div class="req-title">Thickness specification check (+10% / -10%)</div>
+                                                <div class="req-extract">Sample measured -11.2% at junction</div>
+                                            </div>
+                                        </div>
+                                        <span class="badge badge-danger">Fail</span>
+                                    </div>
+                                    <div class="req-item">
+                                        <div class="req-left">
+                                            <i class="fa-solid fa-circle-check req-status-icon pass"></i>
+                                            <div>
+                                                <div class="req-title">Hydrostatic test safety pressure (5.0 MPa min)</div>
+                                                <div class="req-extract">Batch withstood 5.2 MPa successfully</div>
+                                            </div>
+                                        </div>
+                                        <span class="badge badge-success">Pass</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actionable Recommendations Card -->
+                            <div class="card">
+                                <h3 class="section-title" style="margin-bottom: 14px;">Actionable Recommendations</h3>
+                                <div id="recommendationsList">
+                                    <div class="rec-callout critical">
+                                        <div class="rec-body">
+                                            <span class="badge badge-danger" style="margin-bottom: 4px;">CRITICAL</span>
+                                            <p>Calibrate raw carbon roller feed depth to resolve junction thickness drop (-11.2%). Requirements dictate steel wall thickness must stay within strict 10% bound.</p>
+                                            <a href="#standards" class="rec-action-link">Download CAD calibration rules &rarr;</a>
+                                        </div>
+                                    </div>
+                                    <div class="rec-callout warning">
+                                        <div class="rec-body">
+                                            <span class="badge badge-warning" style="margin-bottom: 4px;">WARNING</span>
+                                            <p>Verify phosphorus limits prior to final billet batch casting. Tolerances must not exceed 0.04% under IS 1239 chemical schedule.</p>
+                                            <a href="#standards" class="rec-action-link">View chemical chart guidelines &rarr;</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ========================================================
+                     VIEW 4: INTERACTIVE AUDIT & DASHBOARD (Pages 4, 12, 20)
+                     ======================================================== -->
+                <section class="view-section" id="view-dashboard">
+                    <!-- Top 4 Analytics Metrics Cards -->
+                    <div class="dash-metrics-grid">
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Products Tracked</span>
+                            <h3 id="dashProducts">42</h3>
+                            <span class="badge badge-success" style="width: fit-content; margin-top: 4px;">+12% this month</span>
+                        </div>
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Active Certificates</span>
+                            <h3 id="dashCertificates">18</h3>
+                            <span class="badge badge-neutral" style="width: fit-content; margin-top: 4px;">3 in verification</span>
+                        </div>
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Upcoming Renewals</span>
+                            <h3 id="dashRenewals">2</h3>
+                            <span class="badge badge-warning" style="width: fit-content; margin-top: 4px;">Due in 14 days</span>
+                        </div>
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Avg. Compliance</span>
+                            <h3 id="dashCompliance">84.2%</h3>
+                            <span class="badge badge-primary" style="width: fit-content; margin-top: 4px;">SIH Target: &gt;80.0%</span>
                         </div>
                     </div>
 
-                    <!-- 5. EXTRACTED REQUIREMENTS -->
-                    <div class="doc-card doc-requirements-card">
-                        <div class="doc-card-header">
-                            <div class="doc-card-title">
-                                <i class="fa-solid fa-list-check"></i>
-                                <h3>Extracted Requirements & Evidence Status</h3>
+                    <!-- Split Section: Portfolio Table + Renewal Alerts & Trend -->
+                    <div class="dash-main-split">
+                        <!-- Left: Monitored Product Portfolio -->
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 class="section-title">Monitored Product Portfolio</h3>
+                                <button class="btn btn-primary btn-sm" id="btnAddPortfolioProduct">
+                                    <i class="fa-solid fa-plus"></i> Add Product
+                                </button>
                             </div>
-                            <span class="badge-tag info" id="docReqCountBadge">10 Requirements</span>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Product Name</th>
+                                            <th>Standard</th>
+                                            <th>Status</th>
+                                            <th>Last Checked</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="portfolioTableBody">
+                                        <tr>
+                                            <td><strong>Heavy Structural Steel Beam</strong></td>
+                                            <td>IS 2062 : 2011</td>
+                                            <td><span class="badge badge-success">Compliant</span></td>
+                                            <td>12 Oct 2025</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Spheroidal Graphite Castings</strong></td>
+                                            <td>IS 1865 : 1991</td>
+                                            <td><span class="badge badge-warning">Pending Audit</span></td>
+                                            <td>24 Nov 2025</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Mild Steel Tubular Fittings</strong></td>
+                                            <td>IS 1239 Part 2</td>
+                                            <td><span class="badge badge-danger">Expired</span></td>
+                                            <td>02 Dec 2025</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
-                        <div class="requirements-table-wrapper">
-                            <table class="requirements-table">
+                        <!-- Right: Renewal Alerts & Trend Chart -->
+                        <div>
+                            <!-- Renewal Alerts Card -->
+                            <div class="card" style="margin-bottom: 20px;">
+                                <h3 class="section-title">Certificate Renewal Alerts</h3>
+                                <div class="renewals-list">
+                                    <div class="renewal-item">
+                                        <span class="badge badge-danger">14 days</span>
+                                        <span>Steel Pipes Certification (IS 1239)</span>
+                                    </div>
+                                    <div class="renewal-item">
+                                        <span class="badge badge-warning">45 days</span>
+                                        <span>Gold Stamp HUID License (H-98122)</span>
+                                    </div>
+                                    <div class="renewal-item">
+                                        <span class="badge badge-success">90 days</span>
+                                        <span>Structural Beams ISI Registration</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Compliance Trend Card -->
+                            <div class="card">
+                                <h3 class="section-title">Compliance Index Trend (6m)</h3>
+                                <div class="trend-chart-box">
+                                    <svg class="trend-svg" viewBox="0 0 300 80" preserveAspectRatio="none">
+                                        <path d="M 10 60 Q 60 50, 110 30 T 210 35 T 290 15" fill="none" stroke="var(--primary)" stroke-width="3" stroke-linecap="round"></path>
+                                        <circle cx="10" cy="60" r="4" fill="var(--primary)"></circle>
+                                        <circle cx="70" cy="52" r="4" fill="var(--primary)"></circle>
+                                        <circle cx="130" cy="28" r="4" fill="var(--primary)"></circle>
+                                        <circle cx="190" cy="38" r="4" fill="var(--primary)"></circle>
+                                        <circle cx="250" cy="22" r="4" fill="var(--primary)"></circle>
+                                        <circle cx="290" cy="15" r="4" fill="var(--primary)"></circle>
+                                    </svg>
+                                    <div class="trend-months-row">
+                                        <span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><span>Nov</span><span>Dec</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom: Recent Audit & Gap Alerts History -->
+                    <div class="card">
+                        <h3 class="section-title" style="margin-bottom: 14px;">Recent Audit & Gap Alerts History</h3>
+                        <div class="table-responsive">
+                            <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 120px;">ID</th>
-                                        <th>Requirement Description</th>
-                                        <th style="width: 110px;">Status</th>
-                                        <th>Document Evidence / Notes</th>
+                                        <th>Audit ID</th>
+                                        <th>Product Scope</th>
+                                        <th>Assigned Assessor</th>
+                                        <th>Audit Verdict</th>
                                     </tr>
                                 </thead>
-                                <tbody id="docRequirementsTbody">
-                                    <!-- Injected dynamically -->
+                                <tbody>
+                                    <tr>
+                                        <td><strong>AUD-982A</strong></td>
+                                        <td>Mild steel pipes & carbon components</td>
+                                        <td>Inspector G. S. Bhatti</td>
+                                        <td><span class="badge badge-success">Pass</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>AUD-233B</strong></td>
+                                        <td>Precast Concrete Solid Billets</td>
+                                        <td>Dr. R. K. Prasad</td>
+                                        <td><span class="badge badge-danger">Critical Gaps</span></td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- 6. RAW EXTRACTED TEXT VIEWER -->
-                    <div class="doc-card doc-text-viewer-card">
-                        <div class="doc-card-header" onclick="toggleExtractedTextView()" style="cursor: pointer;">
-                            <div class="doc-card-title">
-                                <i class="fa-solid fa-align-left"></i>
-                                <h3>Extracted Document Text</h3>
-                            </div>
-                            <button type="button" class="text-link-btn" id="toggleTextBtn">
-                                <span>Show Text</span>
-                                <i class="fa-solid fa-chevron-down" id="toggleTextIcon"></i>
-                            </button>
+
+                <!-- ========================================================
+                     VIEW 5: NATIONAL STANDARDS LIBRARY (Pages 5, 13, 21)
+                     ======================================================== -->
+                <section class="view-section" id="view-standards">
+                    <!-- Top 3 Stat Cards -->
+                    <div class="library-stats-grid">
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top"><i class="fa-solid fa-book-bookmark stat-icon"></i></div>
+                            <h3>24,000+ Active</h3>
+                            <p>Total Indian Standards Cataloged</p>
                         </div>
-
-                        <div id="docExtractedTextContainer" style="display: none; margin-top: 15px;">
-                            <div class="extracted-text-meta">
-                                <span id="docCharCountLabel">4,094 characters extracted</span>
-                                <button type="button" class="copy-btn" onclick="copyExtractedText()">
-                                    <i class="fa-regular fa-copy"></i>
-                                    Copy Text
-                                </button>
-                            </div>
-                            <pre class="extracted-text-content" id="docExtractedTextPre"></pre>
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top"><i class="fa-solid fa-stamp stat-icon"></i></div>
+                            <h3>14,500 Mandatory</h3>
+                            <p>ISI Certification Compulsory</p>
+                        </div>
+                        <div class="stat-metric-card">
+                            <div class="stat-card-top"><i class="fa-solid fa-clock-rotate-left stat-icon"></i></div>
+                            <h3>342 Drafts</h3>
+                            <p>Under Active Revision/Feedback</p>
                         </div>
                     </div>
 
-                </div>
+                    <!-- Search and Filter Bar Card -->
+                    <div class="filter-bar-card">
+                        <div class="filter-inputs-row">
+                            <div class="search-input">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" id="standardsKeywordInput" placeholder="Search by Keyword, Product, or Standard Code (e.g., IS 2062 Structural Steel)...">
+                            </div>
+                            <select class="filter-select" id="standardsDivisionSelect">
+                                <option value="">Division: All Sectors</option>
+                                <option value="Metallurgy & Steel">Division: Metallurgy</option>
+                                <option value="Civil Engineering">Division: Civil Engineering</option>
+                                <option value="Electrical">Division: Electrotechnical</option>
+                                <option value="Chemical">Division: Chemical</option>
+                                <option value="Food & Agriculture">Division: Food & Ag</option>
+                            </select>
+                            <select class="filter-select" id="standardsStatusSelect">
+                                <option value="">Status: All Standards</option>
+                                <option value="Active">Status: Active</option>
+                                <option value="Mandatory">Status: Mandatory</option>
+                                <option value="Voluntary">Status: Voluntary</option>
+                                <option value="Revision">Status: Revision</option>
+                            </select>
+                        </div>
+                        <div class="sector-pills-row" id="sectorPills">
+                            <button type="button" class="sector-pill active" data-sector="">All Sectors</button>
+                            <button type="button" class="sector-pill" data-sector="Civil Engineering">Civil Engineering</button>
+                            <button type="button" class="sector-pill" data-sector="Metallurgy & Steel">Metallurgy & Steel</button>
+                            <button type="button" class="sector-pill" data-sector="Chemical">Chemical & Petroleum</button>
+                            <button type="button" class="sector-pill" data-sector="Electronics">Electronics & IT</button>
+                            <button type="button" class="sector-pill" data-sector="Food & Agriculture">Food & Agriculture</button>
+                            <button type="button" class="sector-pill" data-sector="Mechanical">Mechanical Devices</button>
+                        </div>
+                    </div>
 
-            </div>
+                    <!-- Catalog Table Split Layout -->
+                    <div class="library-content-grid">
+                        <!-- Main Standards Table -->
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                                <h3 class="section-title">Indian Standards (IS) Catalog</h3>
+                                <span class="complaints-counter-text" id="standardsCountText">Showing standards</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Standard Code</th>
+                                            <th>Title & Classification</th>
+                                            <th>Compliance Status</th>
+                                            <th>Last Revised</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="standardsTableBody">
+                                        <!-- Loaded dynamically by JavaScript from /api/standards -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Right Bookmarks & Gazette Feed -->
+                        <div>
+                            <!-- Bookmarks Card -->
+                            <div class="card watchlist-card">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 class="section-title">My Bookmarks / Watchlist</h3>
+                                    <span class="badge badge-neutral">3 Active</span>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <div class="activity-feed-item" style="cursor: pointer;" onclick="openStandardModal('IS 1239 (Part 1) : 2004')">
+                                        <div>
+                                            <strong>IS 1239 - Mild Steel Tubes</strong>
+                                            <div class="feed-meta">Standard linked to Tata Castings manual analysis</div>
+                                        </div>
+                                    </div>
+                                    <div class="activity-feed-item" style="cursor: pointer;" onclick="openStandardModal('IS 2062 : 2011')">
+                                        <div>
+                                            <strong>IS 2062 - Structural Steel Beam</strong>
+                                            <div class="feed-meta">Mandatory compliance checklist linked</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Recent Gazette Notifications -->
+                            <div class="card gazette-card">
+                                <h3 class="section-title">Recent Gazette Notifications</h3>
+                                <div class="gazette-list">
+                                    <div class="gazette-item">
+                                        <div class="gazette-meta">
+                                            <span>BIS-GZ-2025-09</span>
+                                            <span>2 hours ago</span>
+                                        </div>
+                                        <p>Amendment 3 published to cement standards detailing fly-ash ratio limits.</p>
+                                    </div>
+                                    <div class="gazette-item">
+                                        <div class="gazette-meta">
+                                            <span>BIS-GZ-2025-08</span>
+                                            <span>Yesterday</span>
+                                        </div>
+                                        <p>Revised safety tests for household electrical switches implemented under IS 302.</p>
+                                    </div>
+                                    <div class="gazette-item">
+                                        <div class="gazette-meta">
+                                            <span>BIS-GZ-2025-07</span>
+                                            <span>3 days ago</span>
+                                        </div>
+                                        <p>Precast concrete solid blocks registration timeline extended to July 2025.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
 
 
-        </section>
-
-
-
-        <!-- VIEW 8: CONSUMER -->
-        <section id="consumer"
-                 class="app-view">
-
-            <div class="verification-card">
-
-                <div class="ver-header">
-
-                    <i class="fa-solid fa-shield-check"></i>
-
-                    Verify Before You Buy
-
-                    <span>
-                        Check authenticity of BIS certified products, Hallmarked jewellery & file consumer grievances
-                    </span>
-
-                </div>
-
-
-                <div class="ver-tabs">
-
-                    <button type="button" class="tab-btn active" id="tabBtnLicense" onclick="switchConsumerTab('license')">
-                        <i class="fa-solid fa-id-card"></i>
-                        Verify License
-                    </button>
-
-                    <button type="button" class="tab-btn" id="tabBtnHallmark" onclick="switchConsumerTab('hallmark')">
-                        <i class="fa-solid fa-gem"></i>
-                        Verify Hallmark (HUID)
-                    </button>
-
-                    <button type="button" class="tab-btn" id="tabBtnComplaint" onclick="switchConsumerTab('complaint')">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        Report Complaint
-                    </button>
-
-                </div>
-
-
-                <!-- TAB 1: VERIFY LICENSE -->
-                <div class="ver-tab-content active" id="verTabLicense">
-                    <label for="licenseInput">
-                        Enter License / Registration Number
-                    </label>
-
-                    <div class="ver-input-row">
-                        <input type="text"
-                               id="licenseInput"
-                               value="CM/L-1234567"
-                               placeholder="e.g. CM/L-1234567, CM/L-7654321, R-41000001">
-
-                        <button type="button" class="primary-btn" id="licenseVerifyBtn" onclick="verifyLicenseNumber(document.getElementById('licenseInput').value.trim())">
-                            <i class="fa-solid fa-check-double"></i>
-                            Verify License
+                <!-- ========================================================
+                     VIEW 6: COMPLAINTS & VIOLATIONS (Pages 6, 14, 22)
+                     ======================================================== -->
+                <section class="view-section" id="view-complaints">
+                    <div class="complaints-header-row">
+                        <div>
+                            <h2 class="section-title">National Compliance Violations Log</h2>
+                            <p class="section-subtitle">Monitor registered consumer complaints, market surveillance alerts, and ISI standard violations. Direct integration with National Consumer Helpline.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btnOpenComplaintModal">
+                            <i class="fa-solid fa-plus"></i> File Violation Complaint
                         </button>
                     </div>
 
-                    <div class="sample-pills-row">
-                        <span>Quick Samples:</span>
-                        <button type="button" class="sample-pill" onclick="setLicenseSample('CM/L-1234567')">CM/L-1234567 (LED Light)</button>
-                        <button type="button" class="sample-pill" onclick="setLicenseSample('CM/L-7654321')">CM/L-7654321 (Cement)</button>
-                        <button type="button" class="sample-pill" onclick="setLicenseSample('R-41000001')">R-41000001 (Smartphone)</button>
-                    </div>
-
-                    <div class="verified-success-box" id="licenseResultBox">
-                        <i class="fa-solid fa-circle-check"></i>
-                        <div>
-                            <h4>Verified</h4>
-                            <p>This BIS license is active and valid.</p>
-                            <div class="ver-details-grid">
-                                <span>License Number: <b>CM/L-1234567</b></span>
-                                <span>Product: <b>LED Street Light</b></span>
-                                <span>Manufacturer: <b>ABC Electronics Pvt. Ltd.</b></span>
-                                <span>Validity: <b>12 Jan 2024 – 11 Jan 2026</b></span>
-                                <span>Applicable Standard: <b>IS 10322 : 2012</b></span>
-                                <span>Status: <b class="text-success">Active / Operating</b></span>
-                            </div>
+                    <!-- 4 Metric Cards Row -->
+                    <div class="stats-four-grid">
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Total Registered</span>
+                            <h3 id="compTotalCount">148</h3>
+                            <span class="badge badge-success" style="width: fit-content; margin-top: 4px;">+14 this week</span>
                         </div>
-                    </div>
-                </div>
-
-
-                <!-- TAB 2: VERIFY HALLMARK (HUID) -->
-                <div class="ver-tab-content" id="verTabHallmark" style="display: none;">
-                    <label for="hallmarkInput">
-                        Enter 6-Character Hallmark Unique Identification (HUID)
-                    </label>
-
-                    <div class="ver-input-row">
-                        <input type="text"
-                               id="hallmarkInput"
-                               placeholder="e.g. AB1234, MN5678, KL9012, HG3421"
-                               maxlength="6"
-                               style="text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">
-
-                        <button type="button" class="primary-btn" id="hallmarkVerifyBtn" onclick="verifyHallmark()">
-                            <i class="fa-solid fa-gem"></i>
-                            Verify Hallmark
-                        </button>
-                    </div>
-
-                    <div class="sample-pills-row">
-                        <span>Sample HUIDs:</span>
-                        <button type="button" class="sample-pill" onclick="setHallmarkSample('AB1234')">AB1234 (Gold 22K)</button>
-                        <button type="button" class="sample-pill" onclick="setHallmarkSample('MN5678')">MN5678 (Gold 18K)</button>
-                        <button type="button" class="sample-pill" onclick="setHallmarkSample('KL9012')">KL9012 (Silver 999)</button>
-                        <button type="button" class="sample-pill" onclick="setHallmarkSample('HG3421')">HG3421 (Gold 24K)</button>
-                    </div>
-
-                    <div id="hallmarkResultBox" style="display: none;">
-                        <!-- Injected dynamically -->
-                    </div>
-                </div>
-
-
-                <!-- TAB 3: REPORT COMPLAINT -->
-                <div class="ver-tab-content" id="verTabComplaint" style="display: none;">
-                    <div class="complaint-intro-box">
-                        <i class="fa-solid fa-shield-cat"></i>
-                        <div>
-                            <h4>BIS Consumer Grievance Portal</h4>
-                            <p>Report misuse of ISI Mark, counterfeit hallmarks, substandard products, or misleading quality claims directly to the Bureau of Indian Standards.</p>
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Active Investigation</span>
+                            <h3>32</h3>
+                            <span class="badge badge-warning" style="width: fit-content; margin-top: 4px;">Under active review</span>
+                        </div>
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">High Priority</span>
+                            <h3>9</h3>
+                            <span class="badge badge-danger" style="width: fit-content; margin-top: 4px;">Immediate action required</span>
+                        </div>
+                        <div class="stat-metric-card">
+                            <span class="section-subtitle">Resolved Cases</span>
+                            <h3>107</h3>
+                            <span class="badge badge-neutral" style="width: fit-content; margin-top: 4px;">94.2% Resolution rate</span>
                         </div>
                     </div>
 
-                    <form id="complaintForm" onsubmit="submitComplaint(event)">
-                        <div class="form-grid-2col">
-                            <div class="form-group">
-                                <label for="cmpName">Complainant Name *</label>
-                                <input type="text" id="cmpName" placeholder="Enter your full name" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cmpEmail">Email Address *</label>
-                                <input type="email" id="cmpEmail" placeholder="e.g. yourname@example.com" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cmpPhone">Phone Number *</label>
-                                <input type="tel" id="cmpPhone" placeholder="10-digit mobile number" pattern="[0-9]{10}" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="cmpCategory">Product Category *</label>
-                                <select id="cmpCategory" required>
-                                    <option value="">Select Category</option>
-                                    <option value="Electronics & IT">Electronics & IT Goods</option>
-                                    <option value="Electrical Appliances">Electrical Appliances</option>
-                                    <option value="Gold & Jewellery">Gold & Jewellery (Hallmarking)</option>
-                                    <option value="Construction & Cement">Construction Materials / Cement</option>
-                                    <option value="Food & Packaged Water">Food & Packaged Drinking Water</option>
-                                    <option value="Automobile & Tyres">Automobile / Tyres</option>
-                                    <option value="Chemicals & Fertilizers">Chemicals & Fertilizers</option>
-                                    <option value="Other">Other Products</option>
+                    <!-- Filter Bar -->
+                    <div class="card" style="margin-bottom: 20px; padding: 14px 20px;">
+                        <div class="complaints-filter-bar">
+                            <div class="filter-left-controls">
+                                <div class="header-search" style="width: 340px;">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" id="complaintsSearchInput" placeholder="Filter by ID, product, or standard...">
+                                </div>
+                                <select class="filter-select" id="complaintsSeverityFilter">
+                                    <option value="">Severity: All</option>
+                                    <option value="Critical">Severity: Critical</option>
+                                    <option value="High">Severity: High</option>
+                                    <option value="Medium">Severity: Medium</option>
+                                </select>
+                                <select class="filter-select" id="complaintsStatusFilter">
+                                    <option value="">Status: All</option>
+                                    <option value="IN_PROGRESS">Status: In Progress</option>
+                                    <option value="UNDER_REVIEW">Status: Under Review</option>
+                                    <option value="PENDING">Status: Pending</option>
+                                    <option value="RESOLVED">Status: Resolved</option>
                                 </select>
                             </div>
+                            <span class="complaints-counter-text" id="complaintsCountText">Showing records</span>
+                        </div>
 
-                            <div class="form-group">
-                                <label for="cmpReference">License / Standard / HUID / Brand Reference</label>
-                                <input type="text" id="cmpReference" placeholder="e.g. CM/L-1234567 or IS 10322 or HUID AB1234">
+                        <!-- Complaints Table -->
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Standard Linked</th>
+                                        <th>Product / Violation Scope</th>
+                                        <th>Severity</th>
+                                        <th>Assignee</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="complaintsTableBody">
+                                    <!-- Populated dynamically via /api/complaints -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+                <!-- ========================================================
+                     VIEW 7: NOTIFICATIONS & ALERTS HUB (Pages 7, 15, 23)
+                     ======================================================== -->
+                <section class="view-section" id="view-notifications">
+                    <div class="notifs-header-row">
+                        <div>
+                            <h2 class="section-title">Notification Center</h2>
+                            <p class="section-subtitle">Track real-time system alerts, gazette amendments, audit updates, and national standard revisions.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-outline btn-sm" id="btnMarkAllNotifsRead">
+                                Mark all read
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="btnNotifPreferences">
+                                Preferences
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Category Tabs -->
+                    <div class="notif-tabs-row" id="notifCategoryTabs">
+                        <button class="notif-tab active" data-category="all">All Alerts (<span id="notifTabAllCount">32</span>)</button>
+                        <button class="notif-tab" data-category="audit">Audit Updates</button>
+                        <button class="notif-tab" data-category="system">System Alerts</button>
+                        <button class="notif-tab" data-category="standard">Standards Revision</button>
+                    </div>
+
+                    <!-- Notifications Feed -->
+                    <div id="notificationsContainer">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </section>
+
+
+                <!-- ========================================================
+                     VIEW 8: GATEWAY LOGIN (Pages 8, 16, 24)
+                     ======================================================== -->
+                <section class="view-section" id="view-gateway">
+                    <div class="gateway-split-page">
+                        <!-- Left Hero Section -->
+                        <div class="gateway-left-hero">
+                            <div>
+                                <span class="gw-branding-tag">BIS Sahayak • COMPLIANCE AI GATEWAY</span>
+                                <h1>National Quality & Standards Hub</h1>
+                                <p>Secure artificial intelligence portal for Bureau of Indian Standards (BIS) officers, certified lab access nodes, and registered manufacturers. Simplifying compliance, verification, and audit pipelines across all Indian sectors.</p>
+                                
+                                <div class="gw-gov-box">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <div>
+                                        <h4>Official Government Prototype</h4>
+                                        <span>Encrypted under National Informatics Centre (NIC) guidelines.</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="cmpSubject">Complaint Subject *</label>
-                                <input type="text" id="cmpSubject" placeholder="e.g. Substandard LED bulb with fake ISI mark" required>
+                            <div class="gateway-footer-info">
+                                <div class="gw-badges-row">
+                                    <span class="badge badge-primary">AI PIPELINE ACTIVE</span>
+                                    <span class="badge badge-success">SSL SECURE</span>
+                                </div>
+                                <p class="gw-copyright">© 2026 Bureau of Indian Standards. Ministry of Consumer Affairs, Food & Public Distribution, Government of India.</p>
                             </div>
                         </div>
 
-                        <div class="form-group" style="margin-top: 12px;">
-                            <label for="cmpDescription">Grievance Details & Evidence *</label>
-                            <textarea id="cmpDescription" rows="4" placeholder="Describe the violation, seller/manufacturer name, purchase location, invoice number, and why product fails BIS standards..." required></textarea>
-                        </div>
+                        <!-- Right Form Panel -->
+                        <div class="gateway-right-panel">
+                            <div class="login-auth-card">
+                                <span class="gw-access-tag">
+                                    <span class="status-dot" style="background: var(--info);"></span> Secure AI Gateway Access
+                                </span>
+                                <h2>Gateway Login</h2>
+                                <p class="subtext">Enter your official credentials to access the compliance portal.</p>
 
-                        <div class="form-actions" style="margin-top: 16px;">
-                            <button type="submit" class="primary-btn" id="cmpSubmitBtn">
-                                <i class="fa-solid fa-paper-plane"></i>
-                                Submit Complaint to BIS
-                            </button>
-                            <button type="reset" class="secondary-btn" onclick="document.getElementById('complaintResultBox').style.display='none'">
-                                Clear Form
-                            </button>
-                        </div>
-                    </form>
+                                <div class="gov-warning-banner">
+                                    <i class="fa-solid fa-triangle-exclamation"></i>
+                                    <p>This is a restricted government computer system. Unauthorized access is subject to severe prosecution.</p>
+                                </div>
 
-                    <div id="complaintResultBox" style="display: none; margin-top: 20px;">
-                        <!-- Injected dynamically -->
+                                <!-- Fast Evaluation Demo Switcher -->
+                                <div class="demo-role-selector">
+                                    <button type="button" class="demo-role-btn active" data-role="officer">Officer (Dr. Prasad)</button>
+                                    <button type="button" class="demo-role-btn" data-role="manufacturer">Manufacturer</button>
+                                    <button type="button" class="demo-role-btn" data-role="consumer">Citizen</button>
+                                </div>
+
+                                <form id="gatewayLoginForm" onsubmit="handleGatewayLogin(event)">
+                                    <div class="form-group">
+                                        <label for="gwEmail">Official ID / NIC Email</label>
+                                        <div class="form-input-wrap">
+                                            <i class="fa-regular fa-envelope prefix-icon"></i>
+                                            <input type="email" id="gwEmail" value="rkprasad@nic.in" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                                            <label for="gwPassword">Password</label>
+                                            <a href="#" style="font-size: 0.76rem; color: var(--primary);">Forgot?</a>
+                                        </div>
+                                        <div class="form-input-wrap">
+                                            <i class="fa-solid fa-lock prefix-icon"></i>
+                                            <input type="password" id="gwPassword" value="DemoPassword@2026" required>
+                                            <button type="button" class="toggle-password-btn" id="btnTogglePassword">
+                                                <i class="fa-regular fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-checkbox-row">
+                                        <input type="checkbox" id="gwRemember" checked>
+                                        <label for="gwRemember">Remember official workstation session</label>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px;" id="btnGatewaySubmit">
+                                        <i class="fa-solid fa-lock"></i> Secure Authenticate
+                                    </button>
+                                </form>
+
+                                <div style="text-align: center; margin-top: 18px; font-size: 0.74rem; color: var(--text-muted);">
+                                    <i class="fa-solid fa-shield-halved"></i> Protected by 256-bit SSL Standard encryption.
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 9: INDUSTRY DASHBOARD -->
-        <section id="dashboard"
-                 class="app-view">
-
-            <div class="dashboard-top-greet">
-
-                <h2>
-                    Welcome back, Raj Kumar
-                </h2>
-
-                <p>
-                    Manage your compliance journey
-                </p>
-
-            </div>
-
-
-            <div class="dash-metrics-grid">
-
-                <div class="dash-card">
-
-                    <h3 id="dashboard-products">
-                        0
-                    </h3>
-
-                    <span>
-                        My Products
-                    </span>
-
-                </div>
-
-
-                <div class="dash-card">
-
-                    <h3 id="dashboard-certificates">
-                        0
-                    </h3>
-
-                    <span>
-                        Certificates
-                    </span>
-
-                </div>
-
-
-                <div class="dash-card">
-
-                    <h3 id="dashboard-score"
-                        class="green">
-
-                        0%
-
-                    </h3>
-
-                    <span>
-                        Compliance
-                    </span>
-
-                </div>
-
-
-                <div class="dash-card">
-
-                    <h3 id="dashboard-renewals"
-                        class="orange">
-
-                        0
-
-                    </h3>
-
-                    <span>
-                        Renewals Due
-                    </span>
-
-                </div>
-
-            </div>
-
-
-            <div class="dash-charts-row">
-
-                <div class="chart-box-wide">
-
-                    <h4>
-
-                        Compliance Status
-
-                        <span class="right-label">
-
-                            Last 6 Months
-
-                            <i class="fa-solid fa-chevron-down"></i>
-
-                        </span>
-
-                    </h4>
-
-
-                    <div class="bar-visualizer-mock">
-
-                        <div class="bar"
-                             style="height: 60%">
-
-                            <span>Jan</span>
-
-                        </div>
-
-                        <div class="bar"
-                             style="height: 70%">
-
-                            <span>Feb</span>
-
-                        </div>
-
-                        <div class="bar"
-                             style="height: 65%">
-
-                            <span>Mar</span>
-
-                        </div>
-
-                        <div class="bar"
-                             style="height: 85%">
-
-                            <span>Apr</span>
-
-                        </div>
-
-                        <div class="bar"
-                             style="height: 80%">
-
-                            <span>May</span>
-
-                        </div>
-
-                        <div class="bar"
-                             style="height: 95%">
-
-                            <span>Jun</span>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="chart-box-narrow">
-
-                    <h4>
-                        Standards by Category
-                    </h4>
-
-
-                    <div class="donut-legend">
-
-                        <div>
-                            <span class="dot elec"></span>
-                            Electrical 40%
-                        </div>
-
-                        <div>
-                            <span class="dot mech"></span>
-                            Mechanical 25%
-                        </div>
-
-                        <div>
-                            <span class="dot civ"></span>
-                            Civil 15%
-                        </div>
-
-                        <div>
-                            <span class="dot chem"></span>
-                            Chemical 10%
-                        </div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-
-        <!-- VIEW 10: HISTORY & AUDIT LOG -->
-        <section id="history"
-                 class="app-view">
-
-            <div class="history-view-container">
-
-                <div class="history-header-card">
-                    <div class="history-header-left">
-                        <h2>
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                            User Activity & Audit History
-                        </h2>
-                        <p>
-                            Review your recent queries, standards searches, uploaded documents, compliance checks, hallmark checks, and reported complaints.
-                        </p>
-                    </div>
-
-                    <div class="history-header-right">
-                        <button type="button" class="secondary-btn btn-danger-outline" onclick="clearUserHistory()" title="Clear your activity history">
-                            <i class="fa-solid fa-trash-can"></i>
-                            Clear History
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filter Chips -->
-                <div class="history-filter-bar">
-                    <button type="button" class="history-filter-chip active" data-filter="all" onclick="filterHistory('all')">
-                        <i class="fa-solid fa-layer-group"></i> All Activity
-                    </button>
-                    <button type="button" class="history-filter-chip" data-filter="ai_query" onclick="filterHistory('ai_query')">
-                        <i class="fa-solid fa-robot"></i> AI Queries
-                    </button>
-                    <button type="button" class="history-filter-chip" data-filter="standard_search" onclick="filterHistory('standard_search')">
-                        <i class="fa-solid fa-magnifying-glass"></i> Standards Search
-                    </button>
-                    <button type="button" class="history-filter-chip" data-filter="document_upload" onclick="filterHistory('document_upload')">
-                        <i class="fa-solid fa-file-arrow-up"></i> Documents
-                    </button>
-                    <button type="button" class="history-filter-chip" data-filter="compliance_check" onclick="filterHistory('compliance_check')">
-                        <i class="fa-solid fa-list-check"></i> Compliance
-                    </button>
-                    <button type="button" class="history-filter-chip" data-filter="hallmark_verification" onclick="filterHistory('hallmark_verification')">
-                        <i class="fa-solid fa-gem"></i> Hallmark Checks
-                    </button>
-                    <button type="button" class="history-filter-chip" data-filter="complaint" onclick="filterHistory('complaint')">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Complaints
-                    </button>
-                </div>
-
-                <!-- Timeline List Container -->
-                <div class="history-timeline-container" id="historyTimelineContainer">
-                    <div class="loading-state">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
-                        <span>Loading your activity history...</span>
-                    </div>
-                </div>
-
-                <!-- SIH 2026 Project Info Card -->
-                <div class="about-card-container" style="margin-top: 32px;">
-                    <h2>About BIS Sahayak / BIS AI Assistant</h2>
-                    <p>
-                        Developed for <b>Smart India Hackathon 2026</b>. An intelligent multi-lingual platform connecting citizens, manufacturers, and quality officers with Indian Standards (IS), automated compliance analysis, and trusted certification verification.
-                    </p>
-                    <div class="pill-badge-row">
-                        <span><i class="fa-solid fa-lightbulb"></i> SIH 2026 Innovation</span>
-                        <span><i class="fa-solid fa-shield-halved"></i> Bureau of Indian Standards</span>
-                        <span><i class="fa-solid fa-language"></i> Multi-Lingual Support</span>
-                        <span><i class="fa-solid fa-flag"></i> Made for India</span>
-                    </div>
-                </div>
-
-            </div>
-
-        </section>
-
-
-    </main>
-
-
-    <!-- LOGIN & ACCOUNT SWITCHER MODAL -->
-    <div class="modal-overlay" id="loginModal" style="display: none;" onclick="closeLoginModal(event)">
-        <div class="modal-card auth-modal-card" onclick="event.stopPropagation()">
+                </section>
+
+            </main>
+        </div>
+
+        <!-- ========================================================
+             MOBILE BOTTOM NAVIGATION (Pages 17-24)
+             ======================================================== -->
+        <nav class="mobile-bottom-nav">
+            <a href="#landing" class="mobile-nav-item active" data-view="landing">
+                <i class="fa-solid fa-house"></i>
+                <span>Home</span>
+            </a>
+            <a href="#ai-chat" class="mobile-nav-item" data-view="ai-chat">
+                <i class="fa-solid fa-message"></i>
+                <span>Chat</span>
+            </a>
+            <a href="#document" class="mobile-nav-item" data-view="document">
+                <i class="fa-solid fa-file-magnifying-glass"></i>
+                <span>Analyze</span>
+            </a>
+            <a href="#dashboard" class="mobile-nav-item" data-view="dashboard">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dash</span>
+            </a>
+            <a href="#standards" class="mobile-nav-item" data-view="standards">
+                <i class="fa-solid fa-bookmark"></i>
+                <span>Library</span>
+            </a>
+        </nav>
+
+    </div>
+
+
+    <!-- ========================================================
+         MODALS & OVERLAYS
+         ======================================================== -->
+
+    <!-- 1. Hallmark & License Verification Modal -->
+    <div class="modal-overlay" id="verificationModal">
+        <div class="modal-box">
             <div class="modal-header">
-                <div class="modal-title-wrap">
-                    <i class="fa-solid fa-shield-halved auth-logo-icon"></i>
-                    <div>
-                        <h3>Sign In / Switch Account</h3>
-                        <span>Access your personalized BIS Sahayak workspace</span>
-                    </div>
-                </div>
-                <button type="button" class="modal-close-btn" onclick="closeLoginModal()">&times;</button>
+                <h3>Hallmark & BIS License Verification</h3>
+                <button type="button" class="modal-close-btn" onclick="closeModal('verificationModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+                    <button type="button" class="btn btn-outline btn-sm active" id="tabVerifyHallmark" onclick="switchVerifyTab('hallmark')">
+                        <i class="fa-solid fa-gem"></i> Verify Hallmark (HUID)
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" id="tabVerifyLicense" onclick="switchVerifyTab('license')">
+                        <i class="fa-solid fa-certificate"></i> Verify ISI License
+                    </button>
+                </div>
 
-            <div class="modal-body auth-modal-body">
-                <!-- Google Sign-In Section -->
-                <div class="auth-section">
-                    <label class="auth-label">Google One-Tap / Sign-In</label>
-                    <div id="googleSignInButtonWrap" class="google-btn-container">
-                        <div id="g_id_onload"
-                             data-client_id="demo-bis-sih2026.apps.googleusercontent.com"
-                             data-context="signin"
-                             data-callback="handleGoogleCredentialResponse"
-                             data-auto_prompt="false">
+                <!-- Hallmark HUID Section -->
+                <div id="verifyHallmarkSection">
+                    <div class="form-group">
+                        <label for="huidInput">6-Character Hallmark Unique ID (HUID)</label>
+                        <div class="form-input-wrap">
+                            <i class="fa-solid fa-barcode prefix-icon"></i>
+                            <input type="text" id="huidInput" placeholder="e.g. AB1234, MN5678, HG3421" maxlength="6" style="text-transform: uppercase;">
                         </div>
-                        <div class="g_id_signin"
-                             data-type="standard"
-                             data-shape="rectangular"
-                             data-theme="outline"
-                             data-text="signin_with"
-                             data-size="large"
-                             data-logo_alignment="left">
+                        <small style="color: var(--text-muted); font-size: 0.74rem;">Laser-etched on certified gold/silver jewelry articles.</small>
+                    </div>
+                    <button type="button" class="btn btn-primary" style="width: 100%;" id="btnSubmitHuid" onclick="handleVerifyHuid()">
+                        Verify HUID Stamp
+                    </button>
+                </div>
+
+                <!-- BIS License Section -->
+                <div id="verifyLicenseSection" style="display: none;">
+                    <div class="form-group">
+                        <label for="licenseInput">BIS License Number (CM/L Number)</label>
+                        <div class="form-input-wrap">
+                            <i class="fa-solid fa-id-card prefix-icon"></i>
+                            <input type="text" id="licenseInput" placeholder="e.g. CM/L-1234567, CM/L-9812234">
                         </div>
                     </div>
-                </div>
-
-                <div class="auth-divider">
-                    <span>OR INSTANT DEMO LOGIN</span>
-                </div>
-
-                <!-- Fast Demo Profiles -->
-                <div class="demo-login-grid">
-                    <button type="button" class="demo-login-card" onclick="loginWithDemo('officer')">
-                        <div class="demo-avatar"><i class="fa-solid fa-user-tie"></i></div>
-                        <div class="demo-info">
-                            <strong>Raj Kumar</strong>
-                            <span>BIS Quality Officer</span>
-                        </div>
-                        <span class="badge-tag success">Officer</span>
-                    </button>
-
-                    <button type="button" class="demo-login-card" onclick="loginWithDemo('manufacturer')">
-                        <div class="demo-avatar"><i class="fa-solid fa-industry"></i></div>
-                        <div class="demo-info">
-                            <strong>Sunita Verma</strong>
-                            <span>Apex Electronics Pvt. Ltd.</span>
-                        </div>
-                        <span class="badge-tag warning">Industry</span>
-                    </button>
-
-                    <button type="button" class="demo-login-card" onclick="loginWithDemo('consumer')">
-                        <div class="demo-avatar"><i class="fa-solid fa-cart-shopping"></i></div>
-                        <div class="demo-info">
-                            <strong>Amit Sharma</strong>
-                            <span>Informed Citizen / Consumer</span>
-                        </div>
-                        <span class="badge-tag primary">Citizen</span>
+                    <button type="button" class="btn btn-primary" style="width: 100%;" id="btnSubmitLicense" onclick="handleVerifyLicense()">
+                        Verify License Conformance
                     </button>
                 </div>
 
-                <div class="auth-divider">
-                    <span>OR CUSTOM CREDENTIALS</span>
-                </div>
+                <!-- Verification Result Display Area -->
+                <div id="verificationResultBox" style="display: none; margin-top: 18px;"></div>
+            </div>
+        </div>
+    </div>
 
-                <form id="customLoginForm" onsubmit="loginWithCustom(event)">
-                    <div class="form-grid-2col">
-                        <div class="form-group">
-                            <label for="loginCustomName">Full Name</label>
-                            <input type="text" id="loginCustomName" placeholder="e.g. Ramesh Patel" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="loginCustomEmail">Email Address</label>
-                            <input type="email" id="loginCustomEmail" placeholder="ramesh@example.com" required>
+
+    <!-- 2. File Complaint Modal -->
+    <div class="modal-overlay" id="complaintModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>File Violation / Grievance Complaint</h3>
+                <button type="button" class="modal-close-btn" onclick="closeModal('complaintModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="complaintForm" onsubmit="handleComplaintSubmit(event)">
+                    <div class="form-group">
+                        <label for="compName">Complainant / Officer Name *</label>
+                        <div class="form-input-wrap">
+                            <i class="fa-regular fa-user prefix-icon"></i>
+                            <input type="text" id="compName" required placeholder="Full Name">
                         </div>
                     </div>
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label for="loginCustomRole">Designation / Role</label>
-                        <select id="loginCustomRole">
-                            <option value="BIS Officer">BIS Quality Officer</option>
-                            <option value="Manufacturer / Industry" selected>Manufacturer / Industry</option>
-                            <option value="Consumer">Citizen / Consumer</option>
-                            <option value="Standards Auditor">Standards Auditor / Lab In-Charge</option>
+                    <div class="form-group">
+                        <label for="compContact">Contact Email or Mobile Number *</label>
+                        <div class="form-input-wrap">
+                            <i class="fa-regular fa-envelope prefix-icon"></i>
+                            <input type="text" id="compContact" required placeholder="email@domain.com or 10-digit mobile">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="compCategory">Violation Category *</label>
+                        <select class="filter-select" id="compCategory" required style="width: 100%; padding-left: 12px;">
+                            <option value="ISI Mark Misuse">Misuse of ISI Standard Mark</option>
+                            <option value="Substandard Quality">Substandard / Defective Product Quality</option>
+                            <option value="Counterfeit Goods">Counterfeit / Fake Certification Label</option>
+                            <option value="Hallmarking Malpractice">Hallmarking / Purity Malpractice</option>
+                            <option value="Service Delay">BIS Service Delay / Application Query</option>
                         </select>
                     </div>
-                    <button type="submit" class="primary-btn w-100" style="margin-top: 14px; justify-content: center; width: 100%;">
-                        <i class="fa-solid fa-right-to-bracket"></i> Sign In to BIS Sahayak
-                    </button>
+                    <div class="form-group">
+                        <label for="compRef">Standard / License Reference (Optional)</label>
+                        <div class="form-input-wrap">
+                            <i class="fa-solid fa-hashtag prefix-icon"></i>
+                            <input type="text" id="compRef" placeholder="e.g. IS 1239 or CM/L-1234567">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="compSubject">Subject *</label>
+                        <div class="form-input-wrap">
+                            <i class="fa-solid fa-heading prefix-icon"></i>
+                            <input type="text" id="compSubject" required placeholder="Brief summary of grievance">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="compDesc">Detailed Description *</label>
+                        <div class="form-input-wrap">
+                            <textarea id="compDesc" rows="4" required placeholder="Provide details regarding batch, location, seller, defect..." style="padding-left: 12px;"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="padding: 12px 0 0 0;">
+                        <button type="button" class="btn btn-outline" onclick="closeModal('complaintModal')">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="btnSubmitComplaint">Submit Grievance</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
 
-    <script src="script.js"></script>
+    <!-- 3. Standard Details Modal -->
+    <div class="modal-overlay" id="standardDetailModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="stdModalCode">IS 1239 (Part 1) : 2004</h3>
+                <button type="button" class="modal-close-btn" onclick="closeModal('standardDetailModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="stdModalBody">
+                <!-- Dynamically loaded standard details -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btnAskAiAboutStandard">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Ask AI Assistant
+                </button>
+            </div>
+        </div>
+    </div>
 
+
+    <!-- 4. Interactive Walkthrough Modal -->
+    <div class="modal-overlay" id="walkthroughModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>BIS Sahayak Platform Walkthrough</h3>
+                <button type="button" class="modal-close-btn" onclick="closeModal('walkthroughModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <div class="step-body">
+                            <h4>AI Standard Finder</h4>
+                            <p>Translate natural language descriptions into exact Indian Standards (e.g. IS 1239 for steel tubes, IS 302 for electrical appliances).</p>
+                        </div>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <div class="step-body">
+                            <h4>Document Intelligence & Gap Analyzer</h4>
+                            <p>Upload test certificates or product manuals to extract technical parameters, check compliance limits, and obtain immediate pass/fail verdicts.</p>
+                        </div>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <div class="step-body">
+                            <h4>National Hallmark & License Verification</h4>
+                            <p>Verify laser-etched 6-character HUID codes on precious jewelry and official ISI CM/L licenses directly through the backend registry.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeModal('walkthroughModal')">Explore Platform</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- TOAST NOTIFICATIONS CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+
+    <!-- ========================================================
+         SCRIPTS: API LAYER & MAIN CONTROLLER
+         ======================================================== -->
+    <!-- Modular API Layer -->
+    <script src="js/api/client.js"></script>
+    <script src="js/api/auth.js"></script>
+    <script src="js/api/ai.js"></script>
+    <script src="js/api/standards.js"></script>
+    <script src="js/api/documents.js"></script>
+    <script src="js/api/compliance.js"></script>
+    <script src="js/api/verification.js"></script>
+    <script src="js/api/complaints.js"></script>
+    <script src="js/api/notifications.js"></script>
+    <script src="js/api/dashboard.js"></script>
+    <script src="js/api/history.js"></script>
+    <script src="js/api/services.js"></script>
+
+    <!-- Main Client Controller Script -->
+    <script src="script.js"></script>
 </body>
 </html>

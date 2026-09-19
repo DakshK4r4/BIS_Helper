@@ -1044,8 +1044,46 @@ def verify_hallmark(huid):
 
 
 # ============================================================
-# REPORT COMPLAINT
+# REPORT & LIST COMPLAINTS
 # ============================================================
+
+@app.route("/api/complaints", methods=["GET"])
+def get_complaints():
+    """
+    Retrieve registered complaints / violations list.
+    Supports filtering by severity, status, or search query.
+    """
+    try:
+        status_filter = request.args.get("status", "").strip()
+        search_query = request.args.get("q", "").strip()
+
+        conn = get_db()
+        sql = "SELECT * FROM complaints WHERE 1=1"
+        params = []
+
+        if status_filter and status_filter.lower() not in ["all", "status: all"]:
+            sql += " AND LOWER(status) = ?"
+            params.append(status_filter.lower())
+
+        if search_query:
+            sql += " AND (complaint_id LIKE ? OR subject LIKE ? OR description LIKE ? OR ref_number LIKE ? OR name LIKE ?)"
+            pat = f"%{search_query}%"
+            params.extend([pat, pat, pat, pat, pat])
+
+        sql += " ORDER BY id DESC"
+        rows = conn.execute(sql, params).fetchall()
+        conn.close()
+
+        complaints_list = [dict(row) for row in rows]
+        return jsonify({
+            "success": True,
+            "count": len(complaints_list),
+            "complaints": complaints_list
+        })
+    except Exception as error:
+        print("GET COMPLAINTS ERROR:", error)
+        return jsonify({"success": False, "error": str(error)}), 500
+
 
 @app.route("/api/complaints", methods=["POST"])
 def report_complaint():
