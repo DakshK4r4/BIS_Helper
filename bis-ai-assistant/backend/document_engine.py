@@ -1,52 +1,64 @@
 import os
 import re
-from PyPDF2 import PdfReader
-from docx import Document
+from database import get_db
+from document_processor import process_document
+from compliance_engine import evaluate_requirement_deterministic, generate_compliance_explanation
 
 
 def extract_document(path):
     """
-    Extract readable text from PDF or DOCX file.
+    Extract readable text using unified document processor (PDF, DOCX, PNG, JPG, JPEG, OCR).
     """
-    extension = os.path.splitext(path)[1].lower()
+    res = process_document(path)
+    return res.get("text", "").strip()
 
-    if extension == ".pdf":
-        reader = PdfReader(path)
-        text_parts = []
-        for i, page in enumerate(reader.pages):
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text)
-        return "\n".join(text_parts).strip()
 
-    elif extension == ".docx":
-        document = Document(path)
-        text_parts = []
-        # Extract headings and paragraphs
-        for paragraph in document.paragraphs:
-            if paragraph.text.strip():
-                text_parts.append(paragraph.text)
-        # Extract text from tables if present
-        for table in document.tables:
-            for row in table.rows:
-                row_text = " | ".join(cell.text.strip() for cell in row.cells if cell.text.strip())
-                if row_text:
-                    text_parts.append(row_text)
-        return "\n".join(text_parts).strip()
+def extract_metadata_from_text(text):
+    """
+    Extract common product and standard metadata from document text.
+    """
+    meta = {}
+    if not text:
+        return meta
 
-    else:
-        raise ValueError(f"Unsupported document format: {extension}. Only PDF and DOCX are supported.")
+    # Product extraction
+    prod_match = re.search(r"(?:Product|Product Name|Equipment|Article|Subject)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
+    if prod_match:
+        meta["product"] = prod_match.group(1).strip()
+
+    # Standard extraction
+    std_match = re.search(r"(?:Reference Standard|Standard|Applicable Standard|Indian Standard)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
+    if not std_match:
+        std_match = re.search(r"\b(IS\s*\d+(?:\s*(?:Part\s*\d+|:\s*\d{4}))*)", text, re.IGNORECASE)
+    if std_match:
+        meta["standard"] = std_match.group(1).strip()
+
+    # Manufacturer extraction
+    mfg_match = re.search(r"(?:Manufacturer|Supplier|Applicant|Company|Producer)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
+    if mfg_match:
+        meta["manufacturer"] = mfg_match.group(1).strip()
+
+    # Model extraction
+    model_match = re.search(r"(?:Model|Model No|Model Number|Type Designation)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
+    if model_match:
+        meta["model"] = model_match.group(1).strip()
+
+    # Document type extraction
+    type_match = re.search(r"(?:Document Type|Doc Type|Test Report|Report No)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
+    if type_match:
+        meta["doc_type"] = type_match.group(1).strip()
+
+    return meta
 
 
 def generate_summary(text):
     """
-    Generate an intelligent structured summary of the document.
+    Generate structured summary of the document.
     """
     if not text or not text.strip():
         return "No text could be extracted from this document."
 
-    metadata = _extract_metadata(text)
-
+    metadata = extract_metadata_from_text(text)
     summary_lines = []
     if metadata.get("product"):
         summary_lines.append(f"Product: {metadata['product']}")
@@ -60,8 +72,8 @@ def generate_summary(text):
         summary_lines.append(f"Type: {metadata['doc_type']}")
 
     content_words = text.split()
-    snippet = " ".join(content_words[:120])
-    if len(content_words) > 120:
+    snippet = " ".join(content_words[:100])
+    if len(content_words) > 100:
         snippet += "..."
 
     if summary_lines:
@@ -69,220 +81,356 @@ def generate_summary(text):
     return snippet
 
 
-def _extract_metadata(text):
+def get_bis_standard_rules(standard_str):
     """
-    Helper to extract common BIS document metadata fields.
+    Query shared BIS Knowledge Base for clause requirements matching standard.
     """
-    meta = {}
+    if not standard_str:
+        return []
 
-    product_match = re.search(r"(?:Product|Product Name)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
-    if product_match:
-        meta["product"] = product_match.group(1).strip()
+    is_num_match = re.search(r"\b\d{3,5}\b", standard_str)
+    if not is_num_match:
+        return []
+    is_num_core = is_num_match.group()
 
-    std_match = re.search(r"(?:Reference Standard|Standard|Applicable Standard)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
-    if not std_match:
-        std_match = re.search(r"\b(IS\s*\d+(?:\s*(?:Part\s*\d+|:\s*\d{4}))*)", text, re.IGNORECASE)
-    if std_match:
-        meta["standard"] = std_match.group(1).strip()
+    conn = get_db()
+    rows = conn.execute("""
+        SELECT * FROM bis_knowledge
+        WHERE is_number LIKE ?
+        ORDER BY clause ASC
+    """, (f"%{is_num_core}%",)).fetchall()
+    conn.close()
 
-    mfg_match = re.search(r"(?:Manufacturer|Supplier|Applicant)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
-    if mfg_match:
-        meta["manufacturer"] = mfg_match.group(1).strip()
-
-    model_match = re.search(r"(?:Model|Model No|Model Number)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
-    if model_match:
-        meta["model"] = model_match.group(1).strip()
-
-    type_match = re.search(r"(?:Document Type|Doc Type)\s*[:\n\r]+\s*([^\n\r\|]+)", text, re.IGNORECASE)
-    if type_match:
-        meta["doc_type"] = type_match.group(1).strip()
-
-    return meta
+    return [dict(r) for r in rows]
 
 
 def analyze_document_content(text, filename=""):
     """
-    Comprehensive document analysis:
-    - Metadata & structured summary
-    - Requirements extraction (REQ IDs, statements, status, evidence)
-    - Compliance scoring & risk level
-    - Violations and gaps
-    - Actionable recommendations
+    Document analysis pipeline using shared BIS Knowledge Base:
+    1. Extract metadata (product, standard, manufacturer).
+    2. Extract requirement clauses, observed evidence, and measured values.
+    3. Match against shared BIS knowledge base.
+    4. Deterministic evaluation (PASS, FAIL, PARTIAL, UNKNOWN, NOT_FOUND).
+    5. Unified backend/frontend contract.
     """
     if not text or not text.strip():
         return {
-            "summary": "Document contains no readable text.",
+            "document": filename,
+            "product": "Unknown",
+            "identified_standard": "Not Identified",
+            "overall_status": "NOT_FOUND",
+            "compliance_score": 0,
+            "summary": "Document contains no readable text. It may be an image or scanned document requiring OCR.",
             "requirements": [],
+            "violations": [{
+                "id": "ERR-01",
+                "title": "Unreadable Document Content",
+                "description": "The uploaded file could not be parsed for text.",
+                "severity": "HIGH"
+            }],
+            "recommendations": ["Upload a text-based PDF, DOCX file, or enable OCR processing."],
+            "sources": [],
+            "status_counts": {"pass": 0, "fail": 0, "partial": 0, "unknown": 0, "not_found": 0},
             "compliance": {
                 "score": 0,
                 "risk": "HIGH",
-                "result": "Document unreadable / Empty",
+                "result": "Unreadable Document",
                 "passed": 0,
                 "failed": 0,
                 "total": 0
-            },
-            "violations": [{
-                "id": "ERR-01",
-                "title": "Unreadable Document",
-                "description": "The uploaded file could not be parsed for text. It may be an image-only scanned document.",
-                "severity": "HIGH"
-            }],
-            "recommendations": ["Upload a text-based PDF or DOCX file, or use OCR preprocessing."]
+            }
         }
 
-    metadata = _extract_metadata(text)
-    summary = generate_summary(text)
+    metadata = extract_metadata_from_text(text)
+    product_name = metadata.get("product") or filename.rsplit(".", 1)[0].replace("_", " ").title()
+    standard_name = metadata.get("standard") or "General BIS Specification"
 
-    # 1. Structured line-by-line extraction
+    # Query shared BIS Knowledge Base for applicable standard rules
+    bis_rules = get_bis_standard_rules(standard_name)
+    rule_map_by_clause = {r["clause"].strip().lower(): r for r in bis_rules}
+
+    # 1. Structure and Clause Extraction (Two-pass parser)
     lines = [l.strip() for l in text.splitlines() if l.strip()]
-
-    req_dict = {}
-    evidence_status = {}
-    explicit_gaps = []
+    req_definitions = {} # req_id -> requirement text
+    req_evidence = {}    # req_id -> { evidence, status, observed_value }
+    req_order = []
 
     i = 0
     while i < len(lines):
         line = lines[i]
 
-        # Check for REQ-xx
-        if re.match(r"^REQ-\d+$", line, re.IGNORECASE):
-            req_id = line.upper()
-            req_val = lines[i + 1] if i + 1 < len(lines) else ""
+        # Check for REQ-xx pattern
+        req_match = re.match(r"^(REQ-\d+)$", line, re.IGNORECASE)
+        if req_match:
+            req_id = req_match.group(1).upper()
+            if req_id not in req_order:
+                req_order.append(req_id)
 
-            # Check if this occurrence is followed by a status (PASS / FAIL / WARNING / PENDING)
-            if i + 2 < len(lines) and lines[i + 2].upper() in ["PASS", "FAIL", "WARNING", "PENDING"]:
-                evidence_status[req_id] = {
-                    "evidence": req_val,
-                    "status": lines[i + 2].upper()
+            # Check if this occurrence is part of an Evidence/Status table:
+            # e.g.:
+            # REQ-01
+            # Product datasheet states outdoor...
+            # PASS
+            if i + 2 < len(lines) and lines[i + 2].upper() in ["PASS", "FAIL", "PARTIAL", "UNKNOWN", "NOT_FOUND"]:
+                ev_text = lines[i + 1]
+                stat = lines[i + 2].upper()
+                obs_val = ""
+                obs_match = re.search(r"(?:measured|observed|finding|tested|value|result)\s*[:\n\r-]+\s*([^\n\r]+)", ev_text, re.IGNORECASE)
+                if obs_match:
+                    obs_val = obs_match.group(1).strip()
+                else:
+                    # Check for numeric measurements in evidence text
+                    num_match = re.search(r"(\d*\.?\d+\s*(?:mm|m|v|a|ma|k|mpa|bar|mg/l|%|mohm|c|kg))", ev_text, re.IGNORECASE)
+                    obs_val = num_match.group(1).strip() if num_match else ev_text
+
+                req_evidence[req_id] = {
+                    "evidence": ev_text,
+                    "status": stat,
+                    "observed_value": obs_val
                 }
                 i += 3
                 continue
-            elif req_id not in req_dict:
-                req_dict[req_id] = req_val
-                i += 2
+
+            # Check if status immediately follows:
+            # REQ-01
+            # PASS
+            # Evidence text...
+            elif i + 1 < len(lines) and lines[i + 1].upper() in ["PASS", "FAIL", "PARTIAL", "UNKNOWN", "NOT_FOUND"]:
+                stat = lines[i + 1].upper()
+                ev_text = lines[i + 2] if i + 2 < len(lines) and not re.match(r"^REQ-\d+$", lines[i + 2], re.IGNORECASE) else ""
+                req_evidence[req_id] = {
+                    "evidence": ev_text or f"Checklist evaluation: {stat}",
+                    "status": stat,
+                    "observed_value": ev_text or stat
+                }
+                i += 2 if not ev_text else 3
                 continue
 
-        # Check for Known Gaps / Potential Violations section
-        elif any(k in line.lower() for k in ["known gaps", "potential violations", "identified violations"]):
-            i += 1
-            while i < len(lines) and not re.match(r"^\d+\.", lines[i]) and "IMPORTANT" not in lines[i]:
-                gap_item = lines[i].strip(" -\t\r\n\x7f•*")
-                if gap_item and len(gap_item) > 10:
-                    explicit_gaps.append(gap_item)
-                i += 1
-            continue
+            # Otherwise, this is a requirement definition
+            else:
+                desc = lines[i + 1] if i + 1 < len(lines) and not re.match(r"^REQ-\d+$", lines[i + 1], re.IGNORECASE) else ""
+                if desc and req_id not in req_definitions:
+                    req_definitions[req_id] = desc
+                i += 2 if desc else 1
+                continue
 
         i += 1
 
-    # Assemble requirements list
-    requirements = []
-    if req_dict:
-        for req_id, desc in req_dict.items():
-            ev = evidence_status.get(req_id, {})
-            status = ev.get("status", "PASS")
-            evidence_desc = ev.get("evidence", "Verified in technical documentation")
-            requirements.append({
-                "id": req_id,
-                "text": desc,
-                "status": status,
-                "evidence": evidence_desc
+    raw_reqs = []
+    # Build unified requirement list from discovered REQ-xx
+    if req_order:
+        for r_id in req_order:
+            desc = req_definitions.get(r_id) or f"Compliance requirement {r_id}"
+            ev_data = req_evidence.get(r_id, {})
+            status_hint = ev_data.get("status")
+            evidence_val = ev_data.get("evidence", "")
+            observed_val = ev_data.get("observed_value", "")
+
+            if not evidence_val:
+                evidence_val = "No test evidence provided in submitted document."
+                observed_val = "Missing from report"
+                status_hint = "NOT_FOUND"
+
+            raw_reqs.append({
+                "id": r_id,
+                "requirement": desc,
+                "evidence": evidence_val,
+                "observed_value": observed_val,
+                "status_hint": status_hint
             })
-    else:
-        # Fallback for documents without REQ-xx format: search for clauses / "shall" statements
+
+
+    # If document had no structured REQ markers, use shared BIS Knowledge Base requirements!
+    if len(raw_reqs) == 0 and bis_rules:
+        for idx, rule in enumerate(bis_rules, 1):
+            raw_reqs.append({
+                "id": f"REQ-{idx:02d}",
+                "requirement": f"Clause {rule['clause']}: {rule['requirement_text']}",
+                "evidence": f"Standard benchmark check for {rule['parameter'] or 'specification'}",
+                "observed_value": "Not provided in uploaded document",
+                "clause": rule["clause"],
+                "bis_rule": rule
+            })
+
+    # Fallback if still empty: extract sentences containing 'shall'
+    if len(raw_reqs) == 0:
         shall_matches = re.findall(r"([^.\n]*\bshall\b[^.\n]*\.)", text, re.IGNORECASE)
-        for idx, stmt in enumerate(shall_matches[:10], 1):
-            stmt_clean = stmt.strip()
-            if len(stmt_clean) > 25:
-                requirements.append({
-                    "id": f"REQ-{idx:02d}",
-                    "text": stmt_clean,
-                    "status": "PASS",
-                    "evidence": "Extracted standard compliance requirement"
-                })
+        for idx, stmt in enumerate(shall_matches[:6], 1):
+            raw_reqs.append({
+                "id": f"REQ-{idx:02d}",
+                "requirement": stmt.strip(),
+                "evidence": stmt.strip(),
+                "observed_value": "Statement in documentation",
+                "clause": f"{idx}.0"
+            })
 
-    # Sort requirements by ID if REQ-xx
-    requirements.sort(key=lambda x: int(re.search(r"\d+", x["id"]).group()) if re.search(r"\d+", x["id"]) else 999)
-
-    # 2. Extract Violations / Non-Compliances
+    # 2. Evaluate requirements with deterministic rules
+    normalized_requirements = []
+    status_counts = {"pass": 0, "fail": 0, "partial": 0, "unknown": 0, "not_found": 0}
     violations = []
-    for req in requirements:
-        if req["status"] == "FAIL":
+    sources = []
+
+    for idx, raw in enumerate(raw_reqs, 1):
+        req_id = raw.get("id") or f"REQ-{idx:02d}"
+        req_text = raw.get("requirement", "")
+        ev_text = raw.get("evidence", "")
+        obs_val = raw.get("observed_value", "")
+        clause_str = raw.get("clause") or ""
+
+        # Match corresponding BIS rule from shared knowledge base
+        matched_rule = raw.get("bis_rule")
+        if not matched_rule and clause_str:
+            matched_rule = rule_map_by_clause.get(clause_str.lower())
+        if not matched_rule:
+            # Search by keyword in requirement text
+            for rule in bis_rules:
+                if (rule.get("parameter") and rule["parameter"].lower() in req_text.lower()) or \
+                   (rule.get("clause") and rule["clause"] in req_text):
+                    matched_rule = rule
+                    clause_str = rule["clause"]
+                    break
+
+        if not clause_str and matched_rule:
+            clause_str = matched_rule.get("clause", "")
+        if not clause_str:
+            clause_str = f"{idx}.1"
+
+        # Deterministic status evaluation
+        if raw.get("status_hint") in ["PASS", "FAIL", "PARTIAL", "UNKNOWN", "NOT_FOUND"]:
+            status = raw["status_hint"]
+            eval_reason = f"Explicit test verification: {status}"
+        else:
+            status, eval_reason = evaluate_requirement_deterministic(req_text, obs_val or ev_text, matched_rule)
+
+        # Missing evidence is NOT PASS
+        if not obs_val or "not provided" in obs_val.lower():
+            if status == "PASS":
+                status = "UNKNOWN"
+
+        status_key = status.lower()
+        if status_key in status_counts:
+            status_counts[status_key] += 1
+        else:
+            status_counts["unknown"] += 1
+
+        req_obj = {
+            "id": req_id,
+            "requirement": req_text,
+            "evidence": ev_text,
+            "observed_value": obs_val or ev_text,
+            "status": status,
+            "source_clause": clause_str,
+            "source": "BIS",
+            "evaluation_reason": eval_reason
+        }
+        normalized_requirements.append(req_obj)
+
+        if status == "FAIL":
             violations.append({
-                "id": req["id"],
-                "title": f"Non-Compliance: {req['id']}",
-                "description": f"{req['text']} — Issue: {req.get('evidence', 'Failed verification')}",
-                "severity": "HIGH"
+                "id": req_id,
+                "title": f"Non-Compliance at Clause {clause_str}",
+                "description": f"{req_text} — Observed: {obs_val or ev_text}. Issue: {eval_reason}",
+                "severity": "HIGH",
+                "clause": clause_str
             })
 
-    # Add explicit gaps found in document
-    for idx, gap in enumerate(explicit_gaps, 1):
-        if not any(gap.lower() in v["description"].lower() for v in violations):
-            violations.append({
-                "id": f"GAP-{idx:02d}",
-                "title": "Documented Compliance Gap",
-                "description": gap,
-                "severity": "MEDIUM"
+    # Deduplicate sources
+    source_set = set()
+    for rule in bis_rules:
+        src_label = f"{rule['is_number']} (Clause {rule['clause']})"
+        if src_label not in source_set:
+            source_set.add(src_label)
+            sources.append({
+                "standard": rule["is_number"],
+                "clause": rule["clause"],
+                "source": "BIS Official Knowledge Base",
+                "url": rule.get("source_url") or "https://www.services.bis.gov.in/"
             })
 
-    # 3. Calculate Compliance Score
-    total_reqs = len(requirements)
+    if not sources:
+        sources.append({
+            "standard": standard_name,
+            "clause": "General Specification",
+            "source": "BIS Official Registry",
+            "url": "https://www.standardsbis.in/"
+        })
+
+    # 3. Calculate Overall Compliance Score
+    total_reqs = len(normalized_requirements)
+    pass_cnt = status_counts["pass"]
+    fail_cnt = status_counts["fail"]
+    partial_cnt = status_counts["partial"]
+
     if total_reqs > 0:
-        passed_reqs = len([r for r in requirements if r["status"] == "PASS"])
-        failed_reqs = len([r for r in requirements if r["status"] == "FAIL"])
-        score = int(round((passed_reqs / total_reqs) * 100))
+        score = int(round(((pass_cnt + (0.5 * partial_cnt)) / total_reqs) * 100))
     else:
-        passed_reqs = 3
-        failed_reqs = len(violations)
-        total_reqs = max(4, passed_reqs + failed_reqs)
-        score = int(round((passed_reqs / total_reqs) * 100))
+        score = 0
 
-    if score >= 80:
+    if fail_cnt == 0 and score >= 85:
+        overall_status = "PASS"
         risk = "LOW"
-        result = "Likely Compliant"
-    elif score >= 50:
+        result_str = "Compliant with Indian Standard"
+    elif score >= 60 and fail_cnt <= 2:
+        overall_status = "PARTIAL"
         risk = "MEDIUM"
-        result = "Further Review Required"
-    else:
+        result_str = "Partially Compliant – Technical Review Required"
+    elif fail_cnt > 0 or score < 60:
+        overall_status = "FAIL"
         risk = "HIGH"
-        result = "Non-compliance Risks Detected"
+        result_str = "Non-Compliances Detected"
+    else:
+        overall_status = "UNKNOWN"
+        risk = "MEDIUM"
+        result_str = "Evidence Incomplete"
 
-    # 4. Generate Actionable Recommendations
+    # 4. Generate Recommendations
     recommendations = []
     for v in violations:
-        d_lower = v["description"].lower()
-        if "creepage" in d_lower or "clearance" in d_lower:
-            recommendations.append("Submit accredited laboratory measurement report for creepage and clearance distances per applicable standard.")
-        elif "safety test" in d_lower or "electrical" in d_lower:
-            recommendations.append("Complete full electrical safety testing (including insulation resistance and electric strength) and provide official test report.")
-        elif "marking" in d_lower:
-            recommendations.append("Ensure all mandatory BIS markings (model, ratings, manufacturer name, standard mark) are clearly legibly affixed.")
-        elif "model" in d_lower:
-            recommendations.append("Ensure supplied test reports and technical drawings explicitly correspond to the declared product model.")
-        else:
-            recommendations.append(f"Remediate {v['id']}: {v['description']}")
+        clause = v.get("clause", "")
+        desc = v.get("description", "")
+        recommendations.append({
+            "priority": "HIGH",
+            "action": f"Remediate non-compliance under Clause {clause}: {desc}",
+            "type": "CRITICAL"
+        })
 
-    std_ref = metadata.get("standard", "the applicable Indian Standard")
-    recommendations.append(f"Ensure all test reports are issued by a BIS-recognized or NABL-accredited laboratory for {std_ref}.")
-    recommendations.append("Maintain complete factory Quality Assurance Plan (QAP) and calibration certificates ready for inspection.")
+    if status_counts["not_found"] > 0 or status_counts["unknown"] > 0:
+        recommendations.append({
+            "priority": "MEDIUM",
+            "action": f"Furnish accredited test laboratory certificates for {status_counts['not_found'] + status_counts['unknown']} unverified requirement(s).",
+            "type": "WARNING"
+        })
 
-    # Deduplicate recommendations
-    unique_recommendations = []
-    for rec in recommendations:
-        if rec not in unique_recommendations:
-            unique_recommendations.append(rec)
+    recommendations.append({
+        "priority": "MEDIUM",
+        "action": f"Verify batch conformance with {standard_name} and ensure factory Quality Assurance Plan (QAP) is updated.",
+        "type": "INFO"
+    })
+
+    summary = generate_summary(text)
 
     return {
-        "metadata": metadata,
+        "document": filename,
+        "product": product_name,
+        "identified_standard": standard_name,
+        "overall_status": overall_status,
+        "compliance_score": score,
         "summary": summary,
-        "requirements": requirements,
+        "requirements": normalized_requirements,
+        "violations": violations,
+        "recommendations": recommendations[:6],
+        "sources": sources,
+        "status_counts": status_counts,
+        "metadata": metadata,
         "compliance": {
             "score": score,
             "risk": risk,
-            "result": result,
-            "passed": passed_reqs,
-            "failed": failed_reqs,
+            "result": result_str,
+            "passed": pass_cnt,
+            "failed": fail_cnt,
+            "partial": partial_cnt,
+            "unknown": status_counts["unknown"],
+            "not_found": status_counts["not_found"],
             "total": total_reqs
-        },
-        "violations": violations,
-        "recommendations": unique_recommendations[:6]
+        }
     }

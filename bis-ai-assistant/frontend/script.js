@@ -555,11 +555,17 @@ async function handleAiChatSubmit(event) {
             // If recommended standard is present, render standard card
             if (res.recommended_standard) {
                 const std = res.recommended_standard;
+                let confDisplay = "95%";
+                if (res.confidence_score !== undefined && res.confidence_score !== null) {
+                    confDisplay = String(res.confidence_score).includes("%")
+                        ? res.confidence_score
+                        : `${Math.round(parseFloat(res.confidence_score) <= 1 ? parseFloat(res.confidence_score) * 100 : parseFloat(res.confidence_score))}%`;
+                }
                 contentHtml += `
                     <div class="embedded-standard-card">
                         <div class="std-card-top">
                             <span class="std-code-tag">${escapeHtml(std.is_number)}</span>
-                            <span class="badge badge-success">${res.confidence_score ? Math.round(res.confidence_score * 100) : 95}% Match</span>
+                            <span class="badge badge-success">${confDisplay} Match</span>
                         </div>
                         <div class="std-title">${escapeHtml(std.title || "")}</div>
                         <div class="std-desc">${escapeHtml(std.description || "")}</div>
@@ -567,6 +573,7 @@ async function handleAiChatSubmit(event) {
                             <span class="meta-pill">Category: ${escapeHtml(std.category || "General")}</span>
                             <span class="meta-pill">Status: ${escapeHtml(std.status || "Active")}</span>
                             <span class="meta-pill">Certification: ${escapeHtml(std.certification || "Product Certification")}</span>
+                            ${std.clause ? `<span class="meta-pill">Clause: ${escapeHtml(std.clause)}</span>` : ""}
                         </div>
                     </div>
                 `;

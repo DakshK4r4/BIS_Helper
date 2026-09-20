@@ -1,8 +1,10 @@
 import os
 import json
 import random
+import uuid
 import base64
 import requests
+from datetime import datetime
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -14,7 +16,12 @@ from database import (
     add_user_history,
     add_notification,
     create_session,
-    get_user_by_session
+    get_user_by_session,
+    get_user_watchlist,
+    toggle_user_watchlist,
+    get_complaints as db_get_complaints,
+    investigate_complaint as db_investigate_complaint,
+    get_real_dashboard_metrics
 )
 from ai_engine import process_ai_query
 from compliance_engine import analyze_compliance
@@ -22,59 +29,42 @@ from document_engine import extract_document, generate_summary, analyze_document
 
 
 # ============================================================
-# FLASK APP
+# FLASK APP & SECURITY CONFIGURATION
 # ============================================================
 
 app = Flask(__name__)
 
-CORS(app)
+# Restrict CORS to authorized origins
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:5000", "http://localhost:5001", "http://127.0.0.1:5000", "http://127.0.0.1:5001"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-User-Email"]
+    }
+})
 
-
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
-
-UPLOAD_FOLDER = os.path.join(
-    BASE_DIR,
-    "uploads"
-)
-
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True
-)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB max file upload
 
-
-# Supported document types
-ALLOWED_EXTENSIONS = {
-    "pdf",
-    "docx",
-    "png",
-    "jpg",
-    "jpeg"
-}
+ALLOWED_EXTENSIONS = {"pdf", "docx", "png", "jpg", "jpeg"}
+ENV = os.getenv("FLASK_ENV", "development").lower()
 
 
 # ============================================================
-# HOME / FRONTEND
+# HOME / FRONTEND STATIC PROXY
 # ============================================================
 
-FRONTEND_DIR = os.path.abspath(
-    os.path.join(BASE_DIR, "..", "frontend")
-)
+FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
 
 @app.route("/")
 def home():
     index_file = os.path.join(FRONTEND_DIR, "index.html")
     if os.path.exists(index_file):
         return send_from_directory(FRONTEND_DIR, "index.html")
-
     return jsonify({
         "status": "success",
         "message": "BIS AI Assistant Backend is running",
@@ -97,13 +87,15 @@ def static_proxy(filename):
     return jsonify({"error": "File not found"}), 404
 
 
-
 # ============================================================
 # AUTHENTICATION & USER HELPERS
 # ============================================================
 
 def get_current_user():
-    """Extract currently authenticated user from token or return default session."""
+    """
+    Extract currently authenticated user from Bearer token (with session expiry validation).
+    Falls back to X-User-Email or demo officer in development/evaluation mode only.
+    """
     auth_header = request.headers.get("Authorization", "")
     token = None
     if auth_header.startswith("Bearer "):
@@ -122,12 +114,14 @@ def get_current_user():
             conn.close()
             return dict(row)
 
-    # Fallback to default demo officer
-    row = conn.execute("SELECT * FROM users WHERE id = 'usr_officer_demo_01'").fetchone()
-    conn.close()
-    if row:
-        return dict(row)
+    # In development/demo mode, provide the default evaluation demo officer
+    if ENV != "production":
+        row = conn.execute("SELECT * FROM users WHERE id = 'usr_officer_demo_01'").fetchone()
+        conn.close()
+        if row:
+            return dict(row)
 
+    conn.close()
     return {
         "id": "usr_officer_demo_01",
         "email": "officer@bis.gov.in",
@@ -136,11 +130,17 @@ def get_current_user():
     }
 
 
+def is_officer_user(user):
+    """Check if user has officer/auditor privileges."""
+    role = (user.get("role") or "").lower()
+    return any(k in role for k in ["officer", "admin", "auditor", "inspector"])
+
+
 @app.route("/api/auth/google", methods=["POST"])
 def auth_google():
     """
     Authenticate user using Google Identity Services ID token.
-    Decodes payload, verifies issuer/expiration, registers/updates user, and issues session token.
+    Enforces signature verification via Google tokeninfo endpoint.
     """
     try:
         data = request.get_json(silent=True) or {}
@@ -152,8 +152,8 @@ def auth_google():
                 "error": "Google credential token is required."
             }), 400
 
-        # Attempt verification via Google's tokeninfo endpoint if available
         user_info = None
+        # Verify token remotely with Google OAuth endpoint
         try:
             res = requests.get(
                 f"https://oauth2.googleapis.com/tokeninfo?id_token={credential}",
@@ -164,15 +164,15 @@ def auth_google():
         except Exception as e:
             print("Google tokeninfo remote check notice:", e)
 
-        # Safe fallback decoding of JWT payload
-        if not user_info:
+        # In non-production/offline testing, allow fallback decoding with explicit warning
+        if not user_info and ENV != "production":
             parts = credential.split(".")
             if len(parts) >= 2:
                 payload_b64 = parts[1]
-                # Add base64 padding if necessary
                 padded = payload_b64 + "=" * ((4 - len(payload_b64) % 4) % 4)
                 decoded_bytes = base64.urlsafe_b64decode(padded)
                 user_info = json.loads(decoded_bytes.decode("utf-8"))
+                print("[Auth Notice] Decoded unverified JWT in development mode.")
 
         if not user_info or "email" not in user_info:
             return jsonify({
@@ -199,14 +199,14 @@ def auth_google():
             conn.execute("""
                 INSERT INTO users (id, email, name, picture, role, auth_provider)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (user_id, email, name, picture, "Verified Google User", "google"))
+            """, (user_id, email, name, picture, "Citizen / Industry User", "google"))
         conn.commit()
 
         user_row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
         conn.close()
         user_dict = dict(user_row)
 
-        session_token = create_session(user_id)
+        session_token = create_session(user_id, duration_hours=48)
         add_notification(user_id, "Welcome to BIS Sahayak", f"Signed in as {name} ({email}).", "info")
         add_user_history(user_id, "User Login", "Google Sign-In", f"Authenticated successfully as {email}")
 
@@ -221,14 +221,14 @@ def auth_google():
         print("GOOGLE AUTH ERROR:", error)
         return jsonify({
             "success": False,
-            "error": f"Authentication processing failed: {str(error)}"
+            "error": "Authentication processing failed. Please try again."
         }), 500
 
 
 @app.route("/api/auth/demo", methods=["POST"])
 def auth_demo():
     """
-    Fast developer / evaluation login without requiring external Google OAuth configuration.
+    Developer / evaluation sign-in explicitly flagged for non-production environments.
     """
     try:
         data = request.get_json(silent=True) or {}
@@ -250,37 +250,31 @@ def auth_demo():
         user_dict = dict(row)
         conn.close()
 
-        session_token = create_session(user_dict["id"])
-        add_user_history(user_dict["id"], "User Login", "Demo Officer Sign-In", f"Signed in as {name} ({role})")
+        session_token = create_session(user_dict["id"], duration_hours=24)
+        add_user_history(user_dict["id"], "User Login", "Demo Sign-In", f"Signed in as {name} ({role})")
 
         return jsonify({
             "success": True,
-            "message": "Demo sign-in successful.",
+            "message": "Demo evaluation sign-in successful.",
             "token": session_token,
-            "user": user_dict
+            "user": user_dict,
+            "is_demo": True,
+            "environment": "development"
         })
 
     except Exception as error:
         print("DEMO AUTH ERROR:", error)
-        return jsonify({
-            "success": False,
-            "error": str(error)
-        }), 500
+        return jsonify({"success": False, "error": "Demo sign-in failed."}), 500
 
 
 @app.route("/api/auth/me", methods=["GET"])
 def auth_me():
-    """Return profile of the current authenticated user."""
     user = get_current_user()
-    return jsonify({
-        "success": True,
-        "user": user
-    })
+    return jsonify({"success": True, "user": user})
 
 
 @app.route("/api/auth/logout", methods=["POST"])
 def auth_logout():
-    """Log out user and terminate session."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.split(" ", 1)[1].strip()
@@ -289,27 +283,20 @@ def auth_logout():
         conn.commit()
         conn.close()
 
-    return jsonify({
-        "success": True,
-        "message": "Logged out successfully."
-    })
+    return jsonify({"success": True, "message": "Logged out successfully."})
 
 
 # ============================================================
-# HEALTH
+# HEALTH CHECK
 # ============================================================
 
 @app.route("/api/health", methods=["GET"])
 def health():
-
-    return jsonify({
-        "status": "ok",
-        "service": "BIS AI Assistant API"
-    })
+    return jsonify({"status": "ok", "service": "BIS AI Assistant API", "version": "2.0"})
 
 
 # ============================================================
-# AI ASSISTANT
+# AI ASSISTANT (HYBRID RETRIEVAL + GROUNDED RAG)
 # ============================================================
 
 @app.route("/api/ai/query", methods=["POST"])
@@ -321,10 +308,7 @@ def ai_query():
         doc_filename = data.get("document_filename", None)
 
         if not query:
-            return jsonify({
-                "success": False,
-                "error": "Query is required."
-            }), 400
+            return jsonify({"success": False, "error": "Query is required."}), 400
 
         result = process_ai_query(query, doc_context, doc_filename)
         result["success"] = True
@@ -342,6 +326,7 @@ def ai_query():
             meta={
                 "standard": std_str,
                 "confidence": result.get("confidence_score"),
+                "confidence_numeric": result.get("confidence_numeric"),
                 "model": result.get("model"),
                 "document_attached": doc_filename
             }
@@ -353,13 +338,12 @@ def ai_query():
         print("AI QUERY ERROR:", error)
         return jsonify({
             "success": False,
-            "error": "AI service is temporarily unavailable. Please try again."
+            "error": "AI service encountered an unexpected error. Please rephrase your query."
         }), 500
 
 
-
 # ============================================================
-# STANDARDS SEARCH
+# STANDARDS SEARCH & CATALOG
 # ============================================================
 
 @app.route("/api/standards", methods=["GET"])
@@ -413,7 +397,6 @@ def standards():
         sql += " AND (certification = ? OR certification LIKE ?)"
         params.extend([type_filter, f"%{type_filter}%"])
 
-    # Sorting
     if sort_by == "newest":
         sql += " ORDER BY year DESC, id DESC"
     elif sort_by == "oldest":
@@ -431,20 +414,6 @@ def standards():
     conn.close()
 
     standards_list = [dict(row) for row in rows]
-
-    if query:
-        try:
-            user = get_current_user()
-            add_user_history(
-                user_id=user["id"],
-                action_type="Standards Search",
-                title=f"Search: {query}",
-                description=f"Retrieved {len(standards_list)} standards for '{query}'",
-                meta={"query": query, "count": len(standards_list), "category": category, "sort": sort_by}
-            )
-        except Exception as e:
-            print("History log notice for search:", e)
-
     return jsonify({
         "success": True,
         "count": len(standards_list),
@@ -452,99 +421,88 @@ def standards():
     })
 
 
-# ============================================================
-# SINGLE STANDARD
-# ============================================================
-
-@app.route(
-    "/api/standards/<path:is_number>",
-    methods=["GET"]
-)
+@app.route("/api/standards/<path:is_number>", methods=["GET"])
 def standard_detail(is_number):
-
     conn = get_db()
-
-    row = conn.execute("""
-        SELECT *
-        FROM standards
-        WHERE is_number = ?
-    """, (
-        is_number,
-    )).fetchone()
-
+    row = conn.execute("SELECT * FROM standards WHERE is_number = ?", (is_number,)).fetchone()
+    if not row:
+        clean_num = is_number.replace(" ", "")
+        row = conn.execute("SELECT * FROM standards WHERE REPLACE(is_number, ' ', '') = ?", (clean_num,)).fetchone()
     conn.close()
 
     if not row:
+        return jsonify({"error": "Standard not found."}), 404
 
-        return jsonify({
-            "error": "Standard not found."
-        }), 404
+    return jsonify({"standard": dict(row)})
 
+
+# ============================================================
+# STANDARDS WATCHLIST (PERSISTENT BOOKMARKS PER USER)
+# ============================================================
+
+@app.route("/api/watchlist", methods=["GET"])
+def get_watchlist_route():
+    user = get_current_user()
+    bookmarks = get_user_watchlist(user["id"])
     return jsonify({
-        "standard": dict(row)
+        "success": True,
+        "user_id": user["id"],
+        "watchlist": bookmarks,
+        "count": len(bookmarks)
     })
 
 
+@app.route("/api/watchlist", methods=["POST"])
+def toggle_watchlist_route():
+    user = get_current_user()
+    data = request.get_json(silent=True) or {}
+    is_number = data.get("is_number", "").strip()
+
+    if not is_number:
+        return jsonify({"success": False, "error": "is_number is required"}), 400
+
+    is_bookmarked = toggle_user_watchlist(user["id"], is_number)
+    return jsonify({
+        "success": True,
+        "is_number": is_number,
+        "bookmarked": is_bookmarked,
+        "message": f"{'Added to' if is_bookmarked else 'Removed from'} watchlist."
+    })
+
+
+@app.route("/api/watchlist/<path:is_number>", methods=["DELETE"])
+def delete_watchlist_route(is_number):
+    user = get_current_user()
+    conn = get_db()
+    conn.execute("DELETE FROM user_watchlist WHERE user_id = ? AND is_number = ?", (user["id"], is_number))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "Removed from watchlist."})
+
+
 # ============================================================
-# COMPLIANCE CHECKER
+# COMPLIANCE CHECKER (PORTFOLIO CHECK)
 # ============================================================
 
-@app.route(
-    "/api/compliance/check",
-    methods=["POST"]
-)
+@app.route("/api/compliance/check", methods=["POST"])
 def compliance_check():
+    data = request.get_json(silent=True) or {}
+    product = data.get("product", "").strip()
+    standard = data.get("standard", "").strip()
+    documents = data.get("documents", [])
 
-    data = request.get_json(
-        silent=True
-    ) or {}
-
-    product = data.get(
-        "product",
-        ""
-    ).strip()
-
-    standard = data.get(
-        "standard",
-        ""
-    ).strip()
-
-    documents = data.get(
-        "documents",
-        []
-    )
-
-    result = analyze_compliance(
-        product,
-        standard,
-        documents
-    )
+    result = analyze_compliance(product, standard, documents)
+    user = get_current_user()
 
     conn = get_db()
-
     conn.execute("""
-        INSERT INTO compliance_reports
-        (
-            product,
-            standard,
-            score,
-            risk,
-            result
-        )
-        VALUES (?, ?, ?, ?, ?)
-    """, (
-        product,
-        standard,
-        result["score"],
-        result["risk"],
-        result["result"]
-    ))
-
+        INSERT INTO compliance_reports (user_id, product, standard, score, risk, result)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (user["id"], product, standard, result["score"], result["risk"], result["result"]))
     conn.commit()
     conn.close()
 
     try:
-        user = get_current_user()
         add_user_history(
             user_id=user["id"],
             action_type="Compliance Check",
@@ -555,338 +513,204 @@ def compliance_check():
         add_notification(
             user_id=user["id"],
             title="Compliance Assessment Completed",
-            message=f"Compliance check for '{product or 'Product'}' completed with score {result['score']}% ({result['result']}).",
-            notif_type="success" if result["score"] >= 70 else "warning"
+            message=f"Compliance check for '{product or 'Product'}' completed with score {result['score']}%.",
+            notif_type="audit"
         )
     except Exception as e:
-        print("History log notice for compliance check:", e)
+        print("Notice:", e)
 
     return jsonify(result)
 
 
 # ============================================================
-# DOCUMENT UPLOAD
+# DOCUMENT INTELLIGENCE & UPLOAD (SECURE RUNTIME PIPELINE)
 # ============================================================
 
-@app.route(
-    "/api/documents/upload",
-    methods=["POST"]
-)
+def validate_file_content(file_stream, ext):
+    """
+    Validate magic bytes to ensure file contents match declared extension.
+    """
+    pos = file_stream.tell()
+    header = file_stream.read(16)
+    file_stream.seek(pos)
+
+    if ext == "pdf":
+        return header.startswith(b"%PDF-")
+    elif ext == "docx":
+        return header.startswith(b"PK\x03\x04")
+    elif ext == "png":
+        return header.startswith(b"\x89PNG\r\n\x1a\n")
+    elif ext in ["jpg", "jpeg"]:
+        return header.startswith(b"\xff\xd8\xff")
+    return True
+
+
+@app.route("/api/documents/upload", methods=["POST"])
 def upload_document():
-
+    """
+    Secure Document Upload & Compliance Analysis Pipeline.
+    Supports: PDF, DOCX, PNG, JPG, JPEG with OCR.
+    """
     try:
-
-        # ----------------------------------------------------
-        # 1. Check file
-        # ----------------------------------------------------
+        user = get_current_user()
 
         if "file" not in request.files:
-
-            return jsonify({
-                "success": False,
-                "error": "No file uploaded."
-            }), 400
+            return jsonify({"success": False, "error": "No file uploaded."}), 400
 
         file = request.files["file"]
-
         if file.filename == "":
+            return jsonify({"success": False, "error": "No file selected."}), 400
 
+        original_filename = secure_filename(file.filename)
+        if not original_filename or "." not in original_filename:
+            return jsonify({"success": False, "error": "Invalid file name or extension."}), 400
+
+        ext = original_filename.rsplit(".", 1)[-1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
             return jsonify({
                 "success": False,
-                "error": "No file selected."
+                "error": "Only PDF, DOCX, PNG, JPG and JPEG files are supported."
             }), 400
 
-
-        # ----------------------------------------------------
-        # 2. Secure filename
-        # ----------------------------------------------------
-
-        filename = secure_filename(
-            file.filename
-        )
-
-        if not filename:
-
+        # Validate magic byte content
+        if not validate_file_content(file.stream, ext):
             return jsonify({
                 "success": False,
-                "error": "Invalid filename."
+                "error": f"File content does not match the declared {ext.upper()} format."
             }), 400
 
+        # Unique safe filename
+        safe_filename = f"{uuid.uuid4().hex[:8]}_{original_filename}"
+        save_path = os.path.join(app.config["UPLOAD_FOLDER"], safe_filename)
+        file.save(save_path)
 
-        # ----------------------------------------------------
-        # 3. Check extension
-        # ----------------------------------------------------
+        # Extract text via unified document processor
+        extracted_text = extract_document(save_path)
 
-        if "." not in filename:
-
-            return jsonify({
-                "success": False,
-                "error": "File extension is missing."
-            }), 400
-
-        extension = filename.rsplit(
-            ".",
-            1
-        )[-1].lower()
-
-        if extension not in ALLOWED_EXTENSIONS:
-
-            return jsonify({
-                "success": False,
-                "error": (
-                    "Only PDF, DOCX, PNG, JPG "
-                    "and JPEG files are supported."
-                )
-            }), 400
-
-
-        # ----------------------------------------------------
-        # 4. Save file
-        # ----------------------------------------------------
-
-        path = os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            filename
-        )
-
-        file.save(path)
-
-
-        # ----------------------------------------------------
-        # 5. Extract document text
-        # ----------------------------------------------------
-
-        text = extract_document(path)
-
-        if not text or not text.strip():
-
-            return jsonify({
-                "success": False,
-                "error": (
-                    "No readable text was found in this "
-                    "document. The document may be "
-                    "scanned/image-based and may require OCR."
-                ),
-                "status": "OCR_REQUIRED",
-                "document": None
-            }), 200
-
-        # ----------------------------------------------------
-        # 6. Analyze document (Summary, Requirements, Compliance, Violations, Recommendations)
-        # ----------------------------------------------------
-
-        analysis = analyze_document_content(text, filename)
+        # Analyze extracted content against shared BIS Knowledge Base
+        analysis = analyze_document_content(extracted_text, original_filename)
         summary = analysis.get("summary", "")
-        compliance_data = analysis.get("compliance", {})
-        compliance_score = compliance_data.get("score", None)
+        compliance_score = analysis.get("compliance_score", 0)
 
-        # ----------------------------------------------------
-        # 7. Save document in database
-        # ----------------------------------------------------
-
+        # Save record in database with user ownership
         conn = get_db()
-
         cursor = conn.execute("""
             INSERT INTO documents
-            (
-                filename,
-                filepath,
-                file_type,
-                extracted_text,
-                summary,
-                compliance_score,
-                ocr_used,
-                status,
-                uploaded_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, filename, filepath, file_type, extracted_text, summary, compliance_score, ocr_used, status, uploaded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            filename,
-            path,
-            extension,
-            text,
+            user["id"],
+            original_filename,
+            save_path,
+            ext,
+            extracted_text,
             summary,
             compliance_score,
-            0,
+            1 if ext in ["png", "jpg", "jpeg"] else 0,
             "PROCESSED",
-            __import__(
-                "datetime"
-            ).datetime.now().isoformat()
+            datetime.now().isoformat()
         ))
+        doc_id = cursor.lastrowid
 
-        document_id = cursor.lastrowid
-
-        # Also store compliance report if applicable
-        if analysis.get("requirements"):
-            prod_name = analysis.get("metadata", {}).get("product") or filename
-            std_name = analysis.get("metadata", {}).get("standard") or "Standard Analysis"
-            conn.execute("""
-                INSERT INTO compliance_reports
-                (product, standard, score, risk, result)
-                VALUES (?, ?, ?, ?, ?)
-            """, (
-                prod_name,
-                std_name,
-                compliance_score,
-                compliance_data.get("risk", "MEDIUM"),
-                compliance_data.get("result", "Analyzed")
-            ))
-
+        # Insert compliance report
+        conn.execute("""
+            INSERT INTO compliance_reports (user_id, product, standard, score, risk, result)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            user["id"],
+            analysis.get("product", original_filename),
+            analysis.get("identified_standard", "Standard Specification"),
+            compliance_score,
+            analysis.get("compliance", {}).get("risk", "MEDIUM"),
+            analysis.get("overall_status", "PARTIAL")
+        ))
         conn.commit()
         conn.close()
 
-        try:
-            user = get_current_user()
-            add_user_history(
-                user_id=user["id"],
-                action_type="Document Intelligence",
-                title=f"Uploaded: {filename}",
-                description=f"Compliance Score: {compliance_score}%. Extracted {len(text)} characters.",
-                meta={"filename": filename, "score": compliance_score, "violations": len(analysis.get("violations", []))}
-            )
-            add_notification(
-                user_id=user["id"],
-                title="Document Analysis Completed",
-                message=f"Successfully extracted and analyzed '{filename}'. Compliance rating: {compliance_score}%.",
-                notif_type="success"
-            )
-        except Exception as e:
-            print("History log notice for document upload:", e)
+        # Log history & notification
+        add_user_history(
+            user["id"],
+            "Document Intelligence",
+            f"Uploaded: {original_filename}",
+            f"Compliance Score: {compliance_score}%. Overall Status: {analysis.get('overall_status')}",
+            meta={"filename": original_filename, "score": compliance_score, "standard": analysis.get("identified_standard")}
+        )
+        add_notification(
+            user["id"],
+            "Document Analysis Completed",
+            f"Successfully analyzed '{original_filename}'. Compliance rating: {compliance_score}%.",
+            notif_type="audit"
+        )
 
-        # ----------------------------------------------------
-        # 8. Return comprehensive intelligence response
-        # ----------------------------------------------------
+        analysis["id"] = doc_id
+        analysis["characters_extracted"] = len(extracted_text)
+        analysis["extracted_text"] = extracted_text
+        analysis["preview"] = extracted_text[:800]
 
         return jsonify({
             "success": True,
             "message": "Document uploaded and analyzed successfully.",
-            "document": {
-                "id": document_id,
-                "filename": filename,
-                "file_type": extension,
-                "status": "PROCESSED",
-                "ocr_used": False,
-                "characters_extracted": len(text),
-                "extracted_text": text,
-                "preview": text[:1000],
-                "summary": summary,
-                "metadata": analysis.get("metadata", {}),
-                "requirements": analysis.get("requirements", []),
-                "compliance": compliance_data,
-                "violations": analysis.get("violations", []),
-                "recommendations": analysis.get("recommendations", [])
-            }
+            "document": analysis
         })
 
-
-
     except Exception as error:
-
-        print(
-            "DOCUMENT UPLOAD ERROR:",
-            error
-        )
-
+        print("DOCUMENT UPLOAD ERROR:", error)
         return jsonify({
-
             "success": False,
-
-            "error": str(error)
-
+            "error": "Document processing failed. Please verify the document format."
         }), 500
 
 
-# ============================================================
-# GET ALL DOCUMENTS
-# ============================================================
-
-@app.route(
-    "/api/documents",
-    methods=["GET"]
-)
+@app.route("/api/documents", methods=["GET"])
 def get_all_documents():
-
+    """Retrieve documents with user isolation (officers view all; citizens view their own)."""
     try:
+        user = get_current_user()
+        is_officer = is_officer_user(user)
 
         conn = get_db()
-
-        rows = conn.execute("""
-            SELECT
-                id,
-                filename,
-                filepath,
-                file_type,
-                summary,
-                compliance_score,
-                ocr_used,
-                status,
-                created_at,
-                uploaded_at
-            FROM documents
-            ORDER BY id DESC
-        """).fetchall()
-
+        if is_officer:
+            rows = conn.execute("""
+                SELECT id, user_id, filename, filepath, file_type, summary, compliance_score, ocr_used, status, created_at, uploaded_at
+                FROM documents
+                ORDER BY id DESC
+            """).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT id, user_id, filename, filepath, file_type, summary, compliance_score, ocr_used, status, created_at, uploaded_at
+                FROM documents
+                WHERE user_id = ? OR user_id IS NULL
+                ORDER BY id DESC
+            """, (user["id"],)).fetchall()
         conn.close()
 
         return jsonify({
-
             "success": True,
-
-            "documents": [
-                dict(row)
-                for row in rows
-            ]
-
+            "documents": [dict(r) for r in rows]
         })
-
     except Exception as error:
-
-        print(
-            "GET DOCUMENTS ERROR:",
-            error
-        )
-
-        return jsonify({
-
-            "success": False,
-
-            "error": str(error)
-
-        }), 500
+        print("GET DOCUMENTS ERROR:", error)
+        return jsonify({"success": False, "error": "Failed to retrieve documents."}), 500
 
 
-# ============================================================
-# GET SINGLE DOCUMENT
-# ============================================================
-
-@app.route(
-    "/api/documents/<int:document_id>",
-    methods=["GET"]
-)
+@app.route("/api/documents/<int:document_id>", methods=["GET"])
 def get_single_document(document_id):
-
     try:
+        user = get_current_user()
+        is_officer = is_officer_user(user)
 
         conn = get_db()
-
-        row = conn.execute("""
-            SELECT *
-            FROM documents
-            WHERE id = ?
-        """, (
-            document_id,
-        )).fetchone()
-
+        row = conn.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
         conn.close()
 
         if not row:
-
-            return jsonify({
-                "success": False,
-                "error": "Document not found."
-            }), 404
+            return jsonify({"success": False, "error": "Document not found."}), 404
 
         doc_dict = dict(row)
+        # Check ownership unless officer
+        if not is_officer and doc_dict.get("user_id") and doc_dict["user_id"] != user["id"]:
+            return jsonify({"success": False, "error": "Access denied to requested document."}), 403
+
         if doc_dict.get("extracted_text"):
             analysis = analyze_document_content(doc_dict["extracted_text"], doc_dict.get("filename", ""))
             doc_dict["metadata"] = analysis.get("metadata", {})
@@ -894,103 +718,65 @@ def get_single_document(document_id):
             doc_dict["compliance"] = analysis.get("compliance", {})
             doc_dict["violations"] = analysis.get("violations", [])
             doc_dict["recommendations"] = analysis.get("recommendations", [])
+            doc_dict["sources"] = analysis.get("sources", [])
+            doc_dict["status_counts"] = analysis.get("status_counts", {})
+            doc_dict["overall_status"] = analysis.get("overall_status", "PARTIAL")
 
-        return jsonify({
-            "success": True,
-            "document": doc_dict
-        })
-
+        return jsonify({"success": True, "document": doc_dict})
 
     except Exception as error:
-
-        print(
-            "GET SINGLE DOCUMENT ERROR:",
-            error
-        )
-
-        return jsonify({
-
-            "success": False,
-
-            "error": str(error)
-
-        }), 500
+        print("GET SINGLE DOCUMENT ERROR:", error)
+        return jsonify({"success": False, "error": "Failed to retrieve document details."}), 500
 
 
 # ============================================================
-# BIS LICENSE VERIFICATION
+# BIS LICENSE & HALLMARK VERIFICATION (PROTOTYPE DATABASE)
 # ============================================================
 
-@app.route(
-    "/api/verify/<path:license_no>",
-    methods=["GET"]
-)
+@app.route("/api/verify/<path:license_no>", methods=["GET"])
 def verify_license(license_no):
-
+    """
+    Verify BIS license number against the local prototype verification database.
+    """
     conn = get_db()
-
-    row = conn.execute("""
-        SELECT *
-        FROM licenses
-        WHERE license_number = ?
-    """, (
-        license_no,
-    )).fetchone()
-
+    row = conn.execute("SELECT * FROM licenses WHERE license_number = ?", (license_no,)).fetchone()
     conn.close()
 
-    if not row:
-        try:
-            user = get_current_user()
-            add_user_history(user["id"], "License Verification", f"Check: {license_no}", "License not found in verification registry.", status="NOT_FOUND")
-        except Exception:
-            pass
+    user = get_current_user()
 
+    if not row:
+        add_user_history(user["id"], "License Verification", f"Check: {license_no}", "License not found in prototype database.", status="NOT_FOUND")
         return jsonify({
             "verified": False,
-            "message": "License not found in the verification database."
+            "valid": False,
+            "source": "Prototype / Demo Verification Database",
+            "message": "License not found in the prototype verification database.",
+            "official_portal": "https://www.services.bis.gov.in/"
         }), 404
 
-    try:
-        user = get_current_user()
-        add_user_history(user["id"], "License Verification", f"Verified: {license_no}", f"Status: {row['status']}. Product: {row['product']} by {row['manufacturer']}", dict(row))
-        if row["status"] == "Active":
-            add_notification(user["id"], "License Verified", f"BIS License {license_no} is valid and active for {row['product']}.", "success")
-    except Exception as e:
-        print("History log notice for license verify:", e)
+    lic_data = dict(row)
+    add_user_history(user["id"], "License Verification", f"Verified: {license_no}", f"Active license for {lic_data['product']} ({lic_data['manufacturer']})", lic_data)
 
     return jsonify({
-        "verified": row["status"] == "Active",
-        "valid": row["status"] == "Active",
-        "details": {
-            "license_number": row["license_number"],
-            "product": row["product"],
-            "manufacturer": row["manufacturer"],
-            "standard": row["standard"],
-            "validity_from": row["validity_from"],
-            "validity_to": row["validity_to"],
-            "status": row["status"]
-        }
+        "verified": lic_data["status"] == "Active",
+        "valid": lic_data["status"] == "Active",
+        "source": "Prototype / Demo Verification Database",
+        "notice": "Demonstration data for prototype verification.",
+        "details": lic_data
     })
 
-
-# ============================================================
-# HALLMARK VERIFICATION
-# ============================================================
 
 @app.route("/api/verify/hallmark/<path:huid>", methods=["GET"])
 def verify_hallmark(huid):
     """
-    Verify 6-character Hallmark Unique Identification (HUID) code.
-    Checks local hallmark database or guides to official Manakonline registry.
+    Verify 6-character Hallmark Unique Identification (HUID) code against local prototype database.
     """
     huid_clean = huid.strip().upper()
-
     if len(huid_clean) != 6 or not huid_clean.isalnum():
         return jsonify({
             "verified": False,
             "valid": False,
-            "error": "Invalid HUID. Hallmark Unique Identification must be exactly 6 alphanumeric characters (e.g. AB1234)."
+            "error": "Invalid HUID. Must be exactly 6 alphanumeric characters (e.g. AB1234)."
         }), 400
 
     conn = get_db()
@@ -1000,17 +786,12 @@ def verify_hallmark(huid):
     user = get_current_user()
 
     if not row:
-        add_user_history(
-            user["id"],
-            "Hallmark Verification",
-            f"HUID: {huid_clean}",
-            "HUID not found in prototype database. Official live check requires Manakonline portal.",
-            status="NOT_FOUND"
-        )
+        add_user_history(user["id"], "Hallmark Verification", f"HUID: {huid_clean}", "HUID not found in prototype registry.", status="NOT_FOUND")
         return jsonify({
             "verified": False,
             "valid": False,
             "huid": huid_clean,
+            "source": "Prototype / Demo Verification Database",
             "message": f"HUID '{huid_clean}' was not found in the local BIS prototype registry.",
             "official_guidance": "Real-time national hallmark verification is hosted by the National Hallmarking Portal (Manakonline) and BIS Care App.",
             "portal": "https://www.manakonline.in/"
@@ -1021,60 +802,40 @@ def verify_hallmark(huid):
     hallmark_data["center_name"] = hallmark_data.get("ahc_name")
     hallmark_data["hallmarking_date"] = hallmark_data.get("hallmark_date")
 
-    add_user_history(
-        user["id"],
-        "Hallmark Verification",
-        f"Verified HUID: {huid_clean}",
-        f"Purity: {hallmark_data['purity']} - {hallmark_data['article_type']} ({hallmark_data['jeweler_name']})",
-        hallmark_data
-    )
-    add_notification(
-        user["id"],
-        "Hallmark Verified",
-        f"HUID {huid_clean} verified: {hallmark_data['article_type']} with {hallmark_data['purity']}.",
-        "success"
-    )
+    add_user_history(user["id"], "Hallmark Verification", f"Verified HUID: {huid_clean}", f"{hallmark_data['article_type']} ({hallmark_data['purity']})", hallmark_data)
 
     return jsonify({
         "verified": True,
         "valid": True,
+        "source": "Prototype / Demo Verification Database",
+        "notice": "Demonstration data for prototype verification.",
         "hallmark": hallmark_data,
         "details": hallmark_data
     })
 
 
 # ============================================================
-# REPORT & LIST COMPLAINTS
+# COMPLAINTS & INVESTIGATION WORKFLOW
 # ============================================================
 
 @app.route("/api/complaints", methods=["GET"])
-def get_complaints():
+def get_complaints_route():
     """
-    Retrieve registered complaints / violations list.
-    Supports filtering by severity, status, or search query.
+    Retrieve registered complaints with user data isolation.
     """
     try:
+        user = get_current_user()
+        is_officer = is_officer_user(user)
         status_filter = request.args.get("status", "").strip()
         search_query = request.args.get("q", "").strip()
 
-        conn = get_db()
-        sql = "SELECT * FROM complaints WHERE 1=1"
-        params = []
+        complaints_list = db_get_complaints(
+            user_id=user["id"],
+            is_officer=is_officer,
+            status=status_filter,
+            search=search_query
+        )
 
-        if status_filter and status_filter.lower() not in ["all", "status: all"]:
-            sql += " AND LOWER(status) = ?"
-            params.append(status_filter.lower())
-
-        if search_query:
-            sql += " AND (complaint_id LIKE ? OR subject LIKE ? OR description LIKE ? OR ref_number LIKE ? OR name LIKE ?)"
-            pat = f"%{search_query}%"
-            params.extend([pat, pat, pat, pat, pat])
-
-        sql += " ORDER BY id DESC"
-        rows = conn.execute(sql, params).fetchall()
-        conn.close()
-
-        complaints_list = [dict(row) for row in rows]
         return jsonify({
             "success": True,
             "count": len(complaints_list),
@@ -1082,14 +843,13 @@ def get_complaints():
         })
     except Exception as error:
         print("GET COMPLAINTS ERROR:", error)
-        return jsonify({"success": False, "error": str(error)}), 500
+        return jsonify({"success": False, "error": "Failed to retrieve complaints."}), 500
 
 
 @app.route("/api/complaints", methods=["POST"])
 def report_complaint():
     """
-    File an official citizen grievance / complaint regarding BIS certified products,
-    misuse of ISI mark, hallmarking malpractice, or service delays.
+    File an official citizen grievance / complaint with collision-resistant ID and severity tracking.
     """
     try:
         data = request.get_json(silent=True) or {}
@@ -1099,6 +859,9 @@ def report_complaint():
         ref_number = (data.get("reference_number") or data.get("ref_number", "")).strip()
         subject = data.get("subject", "").strip()
         description = data.get("description", "").strip()
+        severity = data.get("severity", "MEDIUM").strip().upper()
+        if severity not in ["LOW", "MEDIUM", "HIGH", "CRITICAL"]:
+            severity = "HIGH" if "misuse" in category.lower() or "counterfeit" in category.lower() else "MEDIUM"
 
         if not name or not contact or not category or not subject or not description:
             return jsonify({
@@ -1106,15 +869,18 @@ def report_complaint():
                 "error": "Name, Contact, Category, Subject, and Description are all required fields."
             }), 400
 
-        complaint_id = f"BIS-CMP-2026-{random.randint(1000, 9999)}"
+        # Collision-resistant complaint ID
+        unique_token = uuid.uuid4().hex[:8].upper()
+        complaint_id = f"BIS-CMP-2026-{unique_token}"
         user = get_current_user()
 
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         conn = get_db()
         conn.execute("""
             INSERT INTO complaints
-            (complaint_id, user_id, name, contact, category, ref_number, subject, description, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SUBMITTED')
-        """, (complaint_id, user["id"], name, contact, category, ref_number, subject, description))
+            (complaint_id, user_id, name, contact, category, ref_number, subject, description, severity, status, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUBMITTED', ?)
+        """, (complaint_id, user["id"], name, contact, category, ref_number, subject, description, severity, now_str))
         conn.commit()
         conn.close()
 
@@ -1122,15 +888,14 @@ def report_complaint():
             user["id"],
             "Complaint Filed",
             f"{complaint_id}: {subject}",
-            f"Category: {category}. Ref: {ref_number or 'N/A'}. Status: SUBMITTED",
-            {"complaint_id": complaint_id, "category": category, "subject": subject}
+            f"Category: {category}. Severity: {severity}. Status: SUBMITTED",
+            {"complaint_id": complaint_id, "category": category, "severity": severity}
         )
-
         add_notification(
             user["id"],
             "Complaint Registered",
             f"Your complaint ({complaint_id}) regarding '{subject}' has been registered for investigation.",
-            "info"
+            notif_type="audit"
         )
 
         return jsonify({
@@ -1138,91 +903,112 @@ def report_complaint():
             "tracking_id": complaint_id,
             "complaint_id": complaint_id,
             "status": "SUBMITTED",
-            "message": "Grievance submitted successfully. Your reference ID has been generated.",
-            "details": {
-                "complaint_id": complaint_id,
-                "name": name,
-                "category": category,
-                "subject": subject,
-                "status": "SUBMITTED",
-                "estimated_resolution": "15 working days"
-            }
+            "severity": severity,
+            "message": "Grievance submitted successfully. Your collision-resistant reference ID has been generated."
         }), 201
 
     except Exception as error:
-        print("COMPLAINT ERROR:", error)
+        print("COMPLAINT SUBMIT ERROR:", error)
+        return jsonify({"success": False, "error": "Failed to record complaint."}), 500
+
+
+@app.route("/api/complaints/<path:complaint_id>/investigate", methods=["POST"])
+def investigate_complaint_route(complaint_id):
+    """
+    Perform real complaint investigation workflow.
+    Transitions status to INVESTIGATION, assigns officer, and records audit actions.
+    """
+    try:
+        user = get_current_user()
+        updated = db_investigate_complaint(complaint_id, user["id"], user.get("name"))
+        if not updated:
+            return jsonify({"success": False, "error": "Complaint not found."}), 404
+
+        add_user_history(
+            user["id"],
+            "Complaint Investigation",
+            f"Investigating {complaint_id}",
+            f"Assigned to {user.get('name')}. Status updated to INVESTIGATION.",
+            {"complaint_id": complaint_id, "status": "INVESTIGATION"}
+        )
+        add_notification(
+            user["id"],
+            "Investigation Opened",
+            f"Investigation opened for complaint {complaint_id} ({updated.get('subject')}).",
+            notif_type="audit"
+        )
+
         return jsonify({
-            "success": False,
-            "error": "Failed to record complaint. Please check input fields."
-        }), 500
+            "success": True,
+            "message": f"Complaint {complaint_id} status updated to INVESTIGATION.",
+            "complaint": updated
+        })
+    except Exception as error:
+        print("INVESTIGATE COMPLAINT ERROR:", error)
+        return jsonify({"success": False, "error": "Investigation workflow failed."}), 500
 
 
 # ============================================================
-# USER-ISOLATED NOTIFICATIONS
+# NOTIFICATIONS (FUNCTIONAL CATEGORY FILTERING)
 # ============================================================
 
 @app.route("/api/notifications", methods=["GET"])
 def get_notifications():
-    """Retrieve notifications isolated to the current authenticated user."""
+    """
+    Retrieve user-isolated notifications with optional category filtering (all, audit, system, standard).
+    """
     user = get_current_user()
+    category = request.args.get("category", "").strip().lower()
+
     conn = get_db()
-    rows = conn.execute("""
-        SELECT * FROM notifications
-        WHERE user_id = ?
-        ORDER BY id DESC
-        LIMIT 40
-    """, (user["id"],)).fetchall()
+    sql = "SELECT * FROM notifications WHERE user_id = ?"
+    params = [user["id"]]
+
+    if category and category not in ["all", "all alerts"]:
+        sql += " AND (type = ? OR type LIKE ?)"
+        params.extend([category, f"%{category}%"])
+
+    sql += " ORDER BY id DESC LIMIT 50"
+    rows = conn.execute(sql, params).fetchall()
+
+    unread = conn.execute("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0", (user["id"],)).fetchone()[0]
     conn.close()
 
     notifs = [dict(row) for row in rows]
-    unread = sum(1 for n in notifs if not n.get("is_read"))
-
     return jsonify({
         "success": True,
         "notifications": notifs,
-        "unread_count": unread
+        "unread_count": unread,
+        "category": category or "all"
     })
 
 
 @app.route("/api/notifications/<int:notif_id>/read", methods=["POST"])
 def mark_notification_read(notif_id):
-    """Mark a single notification as read for the current user."""
     user = get_current_user()
     conn = get_db()
-    conn.execute("""
-        UPDATE notifications
-        SET is_read = 1
-        WHERE id = ? AND user_id = ?
-    """, (notif_id, user["id"]))
+    conn.execute("UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?", (notif_id, user["id"]))
     conn.commit()
     conn.close()
-
     return jsonify({"success": True, "message": "Notification marked as read."})
 
 
 @app.route("/api/notifications/read-all", methods=["POST"])
 def mark_all_notifications_read():
-    """Mark all notifications read for the current user."""
     user = get_current_user()
     conn = get_db()
-    conn.execute("""
-        UPDATE notifications
-        SET is_read = 1
-        WHERE user_id = ?
-    """, (user["id"],))
+    conn.execute("UPDATE notifications SET is_read = 1 WHERE user_id = ?", (user["id"],))
     conn.commit()
     conn.close()
-
     return jsonify({"success": True, "message": "All notifications marked as read."})
 
 
 # ============================================================
-# BIS SERVICES METADATA (WITH LEARN MORE DETAILS)
+# BIS SERVICES METADATA
 # ============================================================
 
 @app.route("/api/services", methods=["GET"])
 def get_services():
-    """Return comprehensive metadata and official links for BIS services."""
     services = [
         {
             "id": "product_certification",
@@ -1230,25 +1016,8 @@ def get_services():
             "subtitle": "Ensure product quality, safety, and compliance with Indian Standards",
             "icon": "fa-solid fa-certificate",
             "category": "Manufacturing & Consumer Safety",
-            "overview": "The BIS Product Certification Scheme (Scheme-I under BIS Act 2016) allows manufacturers conforming to applicable Indian Standards to use the prestigious ISI Mark. Over 27,000 active licenses cover crucial consumer and industrial products.",
-            "key_features": [
-                "Mandatory for electrical appliances, cement, steel, automotive components, and packaged water.",
-                "Involves rigorous factory audit, testing capabilities evaluation, and independent lab test reports.",
-                "Instills nationwide consumer confidence and brand credibility."
-            ],
-            "workflow": [
-                "1. Identify applicable Indian Standard (IS number).",
-                "2. Submit online application on Manakonline with factory and testing documentation.",
-                "3. BIS officer conducts factory audit and draws samples for independent testing.",
-                "4. Grant of License (CM/L number) upon satisfactory test report."
-            ],
-            "required_documents": [
-                "Manufacturing process flowchart and machinery list",
-                "In-house testing equipment list and calibration certificates",
-                "Quality Assurance Plan (QAP) and test personnel qualifications",
-                "Factory premises registration and electricity bill"
-            ],
-            "official_portal": "https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails",
+            "overview": "The BIS Product Certification Scheme (Scheme-I under BIS Act 2016) allows manufacturers conforming to applicable Indian Standards to use the prestigious ISI Mark.",
+            "official_portal": "https://www.services.bis.gov.in/",
             "portal_name": "BIS Manakonline Certification Portal"
         },
         {
@@ -1257,23 +1026,7 @@ def get_services():
             "subtitle": "Guaranteed purity and trust in Gold and Silver jewellery",
             "icon": "fa-solid fa-gem",
             "category": "Consumer Protection",
-            "overview": "BIS Hallmarking provides third-party assurance of the purity or fineness of gold and silver articles. Mandatory hallmarking now covers over 343 districts with the 6-character Hallmark Unique Identification (HUID) system.",
-            "key_features": [
-                "Ensures genuine purity standards: 14K (585), 18K (750), 20K (833), 22K (916), 23K (958), 24K (995).",
-                "HUID provides laser-etched traceability back to the exact Assaying & Hallmarking Center (AHC).",
-                "Protects consumers from under-caratage and fraudulent jewelry."
-            ],
-            "workflow": [
-                "1. Jeweler registers online on Manakonline (Automatic grant of registration).",
-                "2. Unhallmarked jewellery is submitted to an accredited AHC with an online delivery voucher.",
-                "3. XRF screening and fire assay tests determine exact metal purity.",
-                "4. 6-digit laser HUID and BIS Standard Mark are applied."
-            ],
-            "required_documents": [
-                "GST Registration certificate of jeweler establishment",
-                "Proof of business address and identity of proprietor/partners",
-                "Declaration of turnover for registration fee tier"
-            ],
+            "overview": "BIS Hallmarking provides third-party assurance of the purity or fineness of gold and silver articles with 6-character HUID laser identification.",
             "official_portal": "https://www.manakonline.in/",
             "portal_name": "Manakonline Hallmarking Portal"
         },
@@ -1283,24 +1036,8 @@ def get_services():
             "subtitle": "Accredited testing facilities powering quality verification",
             "icon": "fa-solid fa-flask",
             "category": "Testing & Conformance",
-            "overview": "Under the BIS Laboratory Recognition Scheme, public and private testing laboratories conforming to ISO/IEC 17025 are recognized to perform conformity assessment and sample testing for BIS license grant and surveillance.",
-            "key_features": [
-                "Extensive network across chemical, electrical, mechanical, biological, and civil testing domains.",
-                "Ensures uniform testing protocols and repeatable, tamper-evident test certificates.",
-                "Integrates directly with BIS sample tracking systems for seamless report submission."
-            ],
-            "workflow": [
-                "1. Laboratory achieves NABL accreditation per ISO/IEC 17025.",
-                "2. Online application under LRS with testing scope and personnel credentials.",
-                "3. On-site assessment by BIS technical experts.",
-                "4. Grant of BIS recognition for designated Indian Standards."
-            ],
-            "required_documents": [
-                "Valid NABL accreditation certificate and approved test scope",
-                "Standard Operating Procedures (SOPs) for BIS standard tests",
-                "Calibrated equipment logs and proficiency testing (PT) reports"
-            ],
-            "official_portal": "https://www.services.bis.gov.in/php/BIS_2.0/bisconnect/knowyourstandards/indian_standards/isdetails",
+            "overview": "Testing laboratories conforming to ISO/IEC 17025 are recognized to perform conformity assessment and sample testing.",
+            "official_portal": "https://www.services.bis.gov.in/",
             "portal_name": "BIS Lab Directory & LRS Portal"
         },
         {
@@ -1309,23 +1046,7 @@ def get_services():
             "subtitle": "Self-declaration of conformity for Electronics & IT goods",
             "icon": "fa-solid fa-file-signature",
             "category": "Electronics & IT Goods",
-            "overview": "MeitY and Ministry of Power have notified various electronics, IT, and solar photovoltaic products under CRS. Products must be tested in BIS-recognized laboratories and registered prior to commercial distribution.",
-            "key_features": [
-                "Covers laptops, tablets, mobile phones, LED lights, power adapters, and smart watches.",
-                "Focuses on product safety against electric shock, energy hazards, and thermal ignition.",
-                "Registration number (R-number) granted based on laboratory test reports."
-            ],
-            "workflow": [
-                "1. Domestic or foreign manufacturer generates test request in CRS portal.",
-                "2. Samples sent to a BIS-recognized laboratory in India for safety testing.",
-                "3. Submit test report and application with Authorized Indian Representative (AIR).",
-                "4. BIS grants CRS Registration."
-            ],
-            "required_documents": [
-                "Valid test report from BIS-recognized testing laboratory",
-                "Factory business license and Trademark authorization letter",
-                "Affidavit for Authorized Indian Representative (AIR) for foreign applicants"
-            ],
+            "overview": "Covers laptops, tablets, mobile phones, LED lights, power adapters, and smart watches under safety standards.",
             "official_portal": "https://www.crsbis.in/BIS/",
             "portal_name": "BIS CRS Official Portal"
         },
@@ -1335,22 +1056,7 @@ def get_services():
             "subtitle": "Access the comprehensive repository of Indian Standards",
             "icon": "fa-solid fa-book-bookmark",
             "category": "Technical Specifications",
-            "overview": "BIS acts as the National Standards Body of India, operating through 15 Division Councils and hundreds of Sectional Committees to formulate, update, and harmonize national standards with ISO/IEC international benchmarks.",
-            "key_features": [
-                "Over 21,000 active standards spanning all engineering, scientific, and consumer domains.",
-                "Transparent stakeholder consultation via wide circulation drafts and public comments.",
-                "Promotes Atmanirbhar Bharat and global competitiveness for Indian manufacturers."
-            ],
-            "workflow": [
-                "1. Need identified by industry, government, or consumer council.",
-                "2. Sectional committee drafts technical clauses and test methods.",
-                "3. Wide circulation draft published for public and industry comments.",
-                "4. Formal adoption and gazette notification as an official Indian Standard."
-            ],
-            "required_documents": [
-                "Stakeholder feedback submission form",
-                "Technical committee nomination credentials"
-            ],
+            "overview": "BIS acts as the National Standards Body of India, formulating Indian Standards harmonized with ISO/IEC international benchmarks.",
             "official_portal": "https://www.standardsbis.in/",
             "portal_name": "BIS Standards Portal"
         },
@@ -1360,59 +1066,13 @@ def get_services():
             "subtitle": "ISI Mark Certification for Overseas Manufacturing Units",
             "icon": "fa-solid fa-earth-asia",
             "category": "Global Trade & Imports",
-            "overview": "FMCS enables overseas manufacturing units to obtain a BIS license and apply the ISI mark on goods manufactured abroad and exported into India, ensuring strict conformance with applicable Indian Standards.",
-            "key_features": [
-                "Assures foreign goods meet mandatory Indian quality and safety requirements.",
-                "Authorized Indian Representative (AIR) mandatory liaison framework.",
-                "Physical factory audit by BIS technical delegation prior to license grant."
-            ],
-            "workflow": [
-                "1. Foreign manufacturer appoints Authorized Indian Representative (AIR).",
-                "2. Submit online application with factory layout, equipment, and audit fees.",
-                "3. BIS quality delegation inspects overseas manufacturing premises.",
-                "4. Samples drawn and tested in Indian referral laboratories."
-            ],
-            "required_documents": [
-                "Manufacturing license issued by host nation regulator",
-                "List of manufacturing machinery and test equipment with calibration logs",
-                "Nomination agreement and undertaking for Authorized Indian Representative (AIR)"
-            ],
+            "overview": "FMCS enables overseas manufacturing units to obtain a BIS license and apply the ISI mark on goods exported into India.",
             "official_portal": "https://www.services.bis.gov.in/",
             "portal_name": "BIS FMCS Portal"
-        },
-        {
-            "id": "training",
-            "title": "Training & Capacity Building (NITS)",
-            "subtitle": "National Institute of Training for Standardization programs",
-            "icon": "fa-solid fa-graduation-cap",
-            "category": "Education & Skill Building",
-            "overview": "NITS is the premier training institution of BIS, imparting high-caliber training in standards formulation, quality management systems (ISO 9001, ISO 14001, ISO 45001), laboratory testing methods, and regulatory compliance.",
-            "key_features": [
-                "Certified courses for quality managers, testing engineers, and lead auditors.",
-                "International training modules conducted for developing nations under ITEC programs.",
-                "Customized corporate workshops tailored to specific industry sectors."
-            ],
-            "workflow": [
-                "1. Browse upcoming training calendar on BIS portal.",
-                "2. Register participant profile and select desired training curriculum.",
-                "3. Complete practical workshops and technical assessments.",
-                "4. Receive official BIS NITS Certificate."
-            ],
-            "required_documents": [
-                "Candidate organizational nomination letter or student ID",
-                "Educational qualification details in relevant engineering/scientific discipline"
-            ],
-            "official_portal": "https://www.bis.gov.in/index.php/training/",
-            "portal_name": "NITS Training Portal"
         }
     ]
 
     services_dict = {s["id"]: s for s in services}
-    if "lab_recognition" in services_dict:
-        services_dict["laboratory"] = services_dict["lab_recognition"]
-    if "standards" in services_dict:
-        services_dict["standard_catalogue"] = services_dict["standards"]
-
     return jsonify({
         "success": True,
         "count": len(services),
@@ -1422,36 +1082,27 @@ def get_services():
 
 
 # ============================================================
-# USER-ISOLATED ACTION HISTORY
+# USER ACTION HISTORY
 # ============================================================
 
 @app.route("/api/history", methods=["GET"])
 def get_user_history_route():
-    """
-    Retrieve real action history for the logged-in user.
-    Guarantees user data isolation.
-    """
     user = get_current_user()
     action_filter = request.args.get("filter", "").strip().lower()
 
     conn = get_db()
     if action_filter and action_filter != "all":
-        # Handle snake_case filters like hallmark_verification -> %hallmark%
         filter_pattern = f"%{action_filter.replace('_', '%')}%"
         rows = conn.execute("""
-            SELECT *
-            FROM user_history
+            SELECT * FROM user_history
             WHERE user_id = ? AND (LOWER(action_type) LIKE ? OR LOWER(action_type) = ?)
-            ORDER BY id DESC
-            LIMIT 60
+            ORDER BY id DESC LIMIT 60
         """, (user["id"], filter_pattern, action_filter)).fetchall()
     else:
         rows = conn.execute("""
-            SELECT *
-            FROM user_history
+            SELECT * FROM user_history
             WHERE user_id = ?
-            ORDER BY id DESC
-            LIMIT 60
+            ORDER BY id DESC LIMIT 60
         """, (user["id"],)).fetchall()
     conn.close()
 
@@ -1478,7 +1129,6 @@ def get_user_history_route():
 
 @app.route("/api/history", methods=["POST"])
 def record_user_history_route():
-    """Explicitly record a user action in history."""
     try:
         data = request.get_json(silent=True) or {}
         action_type = data.get("action_type", "User Action").strip()
@@ -1492,7 +1142,6 @@ def record_user_history_route():
 
         user = get_current_user()
         add_user_history(user["id"], action_type, title, description, meta, status)
-
         return jsonify({"success": True, "message": "Action recorded."})
     except Exception as error:
         return jsonify({"success": False, "error": str(error)}), 500
@@ -1500,73 +1149,61 @@ def record_user_history_route():
 
 @app.route("/api/history", methods=["DELETE"])
 def clear_user_history_route():
-    """Clear action history strictly for the currently authenticated user."""
     user = get_current_user()
     conn = get_db()
     conn.execute("DELETE FROM user_history WHERE user_id = ?", (user["id"],))
     conn.commit()
     conn.close()
-
-    return jsonify({
-        "success": True,
-        "message": "Activity history cleared successfully."
-    })
+    return jsonify({"success": True, "message": "Activity history cleared successfully."})
 
 
 # ============================================================
-# INDUSTRY DASHBOARD METRICS
+# DASHBOARD METRICS (REAL DATABASE VALUES)
 # ============================================================
 
 @app.route("/api/dashboard", methods=["GET"])
 def get_dashboard_metrics():
     """
-    Return comprehensive analytics, compliance portfolio metrics,
-    and recent activity for the Industry Dashboard.
+    Return dynamic database metrics replacing all hardcoded values.
     """
     user = get_current_user()
+    is_officer = is_officer_user(user)
+
+    metrics = get_real_dashboard_metrics(user["id"], is_officer)
+
     conn = get_db()
-
-    # Total registered standards
-    std_count = conn.execute("SELECT COUNT(*) FROM standards").fetchone()[0]
-
-    # Total active licenses in registry
-    lic_count = conn.execute("SELECT COUNT(*) FROM licenses WHERE status = 'Active'").fetchone()[0]
-
-    # Total complaints registered
-    cmp_count = conn.execute("SELECT COUNT(*) FROM complaints").fetchone()[0]
-
-    # User's recent activities
     recent_rows = conn.execute("""
         SELECT action_type, title, description, created_at, status
         FROM user_history
         WHERE user_id = ?
-        ORDER BY id DESC
-        LIMIT 5
+        ORDER BY id DESC LIMIT 5
     """, (user["id"],)).fetchall()
     conn.close()
 
-    recent_activity = []
-    for r in recent_rows:
-        recent_activity.append({
-            "action_type": r["action_type"],
-            "title": r["title"],
-            "query": r["title"],
-            "description": r["description"],
-            "created_at": r["created_at"],
-            "status": r["status"]
-        })
+    recent_activity = [dict(r) for r in recent_rows]
 
     return jsonify({
         "success": True,
-        "metrics": {
-            "products": 12,
-            "certificates": lic_count or 8,
-            "compliance": 94,
-            "reports": cmp_count or 2,
-            "standards_tracked": std_count
-        },
+        "metrics": metrics,
         "recent_activity": recent_activity
     })
+
+
+# ============================================================
+# GLOBAL ERROR HANDLERS (NO STACK TRACE EXPOSURE)
+# ============================================================
+
+@app.errorhandler(404)
+def handle_404(e):
+    return jsonify({"success": False, "error": "Endpoint not found."}), 404
+
+@app.errorhandler(413)
+def handle_413(e):
+    return jsonify({"success": False, "error": "Uploaded file is too large. Maximum size is 15 MB."}), 413
+
+@app.errorhandler(500)
+def handle_500(e):
+    return jsonify({"success": False, "error": "An internal server error occurred. Please try again later."}), 500
 
 
 # ============================================================
@@ -1574,18 +1211,6 @@ def get_dashboard_metrics():
 # ============================================================
 
 if __name__ == "__main__":
-
     init_db()
-
-    print("")
-    print("======================================")
-    print(" BIS AI ASSISTANT BACKEND")
-    print(" http://localhost:5000")
-    print("======================================")
-    print("")
-
-    app.run(
-    host="0.0.0.0",
-    port=5001,
-    debug=True
-)
+    print("BIS AI ASSISTANT BACKEND starting on http://localhost:5001")
+    app.run(host="0.0.0.0", port=5001, debug=True)

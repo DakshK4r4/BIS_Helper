@@ -1,5 +1,5 @@
 /**
- * BIS Sahayak - Standards Library API Service
+ * BIS Sahayak - Standards Library & Watchlist API Service
  */
 
 const standardsApi = {
@@ -9,6 +9,18 @@ const standardsApi = {
 
     async getDetail(isNumber) {
         return apiClient.get(`/standards/${encodeURIComponent(isNumber)}`);
+    },
+
+    async getWatchlist() {
+        return apiClient.get("/watchlist");
+    },
+
+    async toggleWatchlist(isNumber) {
+        return apiClient.post("/watchlist", { is_number: isNumber });
+    },
+
+    async removeWatchlist(isNumber) {
+        return apiClient.delete(`/watchlist/${encodeURIComponent(isNumber)}`);
     }
 };
 

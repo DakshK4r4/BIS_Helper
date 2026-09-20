@@ -3,8 +3,12 @@
  */
 
 const notificationsApi = {
-    async getAll() {
-        return apiClient.get("/notifications");
+    async getAll(category = "") {
+        const params = {};
+        if (category && category !== "all") {
+            params.category = category;
+        }
+        return apiClient.get("/notifications", params);
     },
 
     async markRead(notifId) {

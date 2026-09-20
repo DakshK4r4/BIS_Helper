@@ -9,6 +9,10 @@ const complaintsApi = {
 
     async submit(complaintData) {
         return apiClient.post("/complaints", complaintData);
+    },
+
+    async investigate(complaintId) {
+        return apiClient.post(`/complaints/${encodeURIComponent(complaintId)}/investigate`);
     }
 };
 
