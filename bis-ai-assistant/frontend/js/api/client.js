@@ -3,7 +3,8 @@
  * Manages base URL, token authorization, error handling, JSON and multipart uploads.
  */
 
-const API_BASE_URL = window.__API_BASE_URL__ || "http://localhost:5000/api";
+const API_BASE_URL =
+    window.__API_BASE_URL__ || "http://localhost:5001/api";
 
 class ApiClient {
     constructor(baseUrl = API_BASE_URL) {
