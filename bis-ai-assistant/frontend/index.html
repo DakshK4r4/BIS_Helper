@@ -762,7 +762,7 @@
                     <div class="library-stats-grid">
                         <div class="stat-metric-card">
                             <div class="stat-card-top"><i class="fa-solid fa-book-bookmark stat-icon"></i></div>
-                            <h3>24,000+ Active</h3>
+                            <h3 id="libraryTotalStandardsCount">24,000+ Active</h3>
                             <p>Total Indian Standards Cataloged</p>
                         </div>
                         <div class="stat-metric-card">
@@ -1151,6 +1151,10 @@
                 </button>
             </div>
             <div class="modal-body">
+                <div class="verification-disclaimer-banner" style="background: rgba(13, 71, 161, 0.08); border-left: 3px solid var(--primary); padding: 8px 12px; margin-bottom: 16px; border-radius: 4px; font-size: 0.78rem; color: var(--text-secondary);">
+                    <i class="fa-solid fa-circle-info" style="color: var(--primary); margin-right: 6px;"></i>
+                    <strong>Prototype Verification Sandbox:</strong> Demonstrates live registry verification workflow. For official legal verification, visit <a href="https://www.services.bis.gov.in/" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">bis.gov.in</a> or the BIS Care App.
+                </div>
                 <div style="display: flex; gap: 8px; margin-bottom: 20px;">
                     <button type="button" class="btn btn-outline btn-sm active" id="tabVerifyHallmark" onclick="switchVerifyTab('hallmark')">
                         <i class="fa-solid fa-gem"></i> Verify Hallmark (HUID)

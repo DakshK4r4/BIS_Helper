@@ -245,6 +245,43 @@ def init_db():
         )
     """)
 
+    # 14. Ingested Official BIS Documents Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bis_documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            is_number TEXT,
+            document_type TEXT DEFAULT 'Standard Specification',
+            publication_year INTEGER,
+            category TEXT,
+            total_pages INTEGER DEFAULT 1,
+            total_chunks INTEGER DEFAULT 0,
+            source_path TEXT,
+            indexed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # 15. Ingested BIS Document Chunks Table (for semantic and hybrid clause retrieval)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS bis_chunks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id TEXT NOT NULL,
+            chunk_id TEXT UNIQUE NOT NULL,
+            is_number TEXT,
+            clause TEXT,
+            section TEXT,
+            title TEXT,
+            chunk_text TEXT NOT NULL,
+            chunk_tokens INTEGER DEFAULT 0,
+            metadata_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_is_number ON bis_chunks(is_number);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_clause ON bis_chunks(clause);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_chunks_doc_id ON bis_chunks(document_id);")
+
     # Run schema migrations
     ensure_columns(cursor, 'documents', {
         'user_id': 'TEXT',
@@ -562,8 +599,14 @@ def get_user_by_session(token):
                 conn.commit()
                 conn.close()
                 return None
-        except Exception:
-            pass
+        except (TypeError, ValueError):
+            # An unreadable expiration is not a valid session.  Failing open
+            # here would turn a malformed database value into an indefinite
+            # login.
+            conn.execute("DELETE FROM user_sessions WHERE token = ?", (token,))
+            conn.commit()
+            conn.close()
+            return None
 
     user_dict = dict(row)
     user_dict.pop("expires_at", None)
@@ -620,7 +663,7 @@ def get_complaints(user_id=None, is_officer=False, status=None, search=None):
     params = []
 
     if not is_officer and user_id:
-        sql += " AND (user_id = ? OR user_id IS NULL)"
+        sql += " AND user_id = ?"
         params.append(user_id)
 
     if status and status.lower() not in ["all", "status: all"]:
@@ -647,7 +690,7 @@ def investigate_complaint(complaint_id, officer_id, officer_name=None):
         return None
 
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    action_note = f"Investigation initiated by {officer_name or officer_id}. Audit workflow and laboratory sample testing verified."
+    action_note = f"Investigation initiated by {officer_name or officer_id}. Pending review and evidence collection."
     conn.execute("""
         UPDATE complaints
         SET status = 'INVESTIGATION',
@@ -689,11 +732,11 @@ def get_real_dashboard_metrics(user_id=None, is_officer=True):
         cmp_count = conn.execute("SELECT COUNT(*) FROM complaints WHERE user_id = ?", (user_id,)).fetchone()[0]
         avg_row = conn.execute("SELECT AVG(compliance_score) FROM documents WHERE user_id = ? AND compliance_score IS NOT NULL", (user_id,)).fetchone()
 
-    avg_compliance = round(avg_row[0], 1) if (avg_row and avg_row[0] is not None) else 85.0
+    avg_compliance = round(avg_row[0], 1) if (avg_row and avg_row[0] is not None) else 0.0
 
     # Monitored products: distinct products across licenses and standards
     prod_row = conn.execute("SELECT COUNT(DISTINCT product) FROM licenses").fetchone()
-    prod_count = prod_row[0] if prod_row and prod_row[0] > 0 else 12
+    prod_count = prod_row[0] if prod_row else 0
 
     conn.close()
 
@@ -705,6 +748,100 @@ def get_real_dashboard_metrics(user_id=None, is_officer=True):
         "documents_analyzed": doc_count,
         "standards_tracked": std_count
     }
+
+
+# ============================================================
+# BIS DOCUMENTS & CHUNKS INGESTION HELPERS
+# ============================================================
+
+def save_bis_document(doc_data):
+    """
+    Insert or replace an indexed BIS document metadata record.
+    doc_data: dict with document_id, title, is_number, document_type, publication_year, category, total_pages, total_chunks, source_path
+    """
+    conn = get_db()
+    conn.execute("""
+        INSERT OR REPLACE INTO bis_documents
+        (document_id, title, is_number, document_type, publication_year, category, total_pages, total_chunks, source_path, indexed_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    """, (
+        doc_data.get("document_id"),
+        doc_data.get("title", "Untitled Document"),
+        doc_data.get("is_number"),
+        doc_data.get("document_type", "Standard Specification"),
+        doc_data.get("publication_year"),
+        doc_data.get("category"),
+        doc_data.get("total_pages", 1),
+        doc_data.get("total_chunks", 0),
+        doc_data.get("source_path")
+    ))
+    conn.commit()
+    conn.close()
+
+
+def save_bis_chunks(chunks_list):
+    """
+    Bulk insert or replace chunks into bis_chunks.
+    chunks_list: list of dicts with document_id, chunk_id, is_number, clause, section, title, chunk_text, chunk_tokens, metadata_json
+    """
+    if not chunks_list:
+        return
+    conn = get_db()
+    for ch in chunks_list:
+        meta = ch.get("metadata_json")
+        if isinstance(meta, dict):
+            meta = json.dumps(meta)
+        conn.execute("""
+            INSERT OR REPLACE INTO bis_chunks
+            (document_id, chunk_id, is_number, clause, section, title, chunk_text, chunk_tokens, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            ch.get("document_id"),
+            ch.get("chunk_id", str(uuid.uuid4())[:12]),
+            ch.get("is_number"),
+            ch.get("clause"),
+            ch.get("section"),
+            ch.get("title"),
+            ch.get("chunk_text", ""),
+            ch.get("chunk_tokens", len(ch.get("chunk_text", "").split())),
+            meta
+        ))
+    conn.commit()
+    conn.close()
+
+
+def get_bis_chunks(is_number=None, clause=None, search=None, limit=50):
+    """Retrieve indexed document chunks filtered by IS number, clause, or text query."""
+    conn = get_db()
+    sql = "SELECT * FROM bis_chunks WHERE 1=1"
+    params = []
+
+    if is_number:
+        clean_is = is_number.upper().replace(" ", "")
+        sql += " AND (REPLACE(UPPER(is_number), ' ', '') LIKE ? OR REPLACE(UPPER(document_id), ' ', '') LIKE ?)"
+        params.extend([f"%{clean_is}%", f"%{clean_is}%"])
+
+    if clause:
+        sql += " AND clause LIKE ?"
+        params.append(f"{clause}%")
+
+    if search:
+        sql += " AND (chunk_text LIKE ? OR title LIKE ? OR section LIKE ?)"
+        pat = f"%{search}%"
+        params.extend([pat, pat, pat])
+
+    sql += f" ORDER BY id ASC LIMIT {limit}"
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def get_bis_documents():
+    """Retrieve all ingested documents."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM bis_documents ORDER BY indexed_at DESC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 if __name__ == "__main__":

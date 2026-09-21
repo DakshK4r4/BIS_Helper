@@ -17,6 +17,7 @@ const STATE = {
     speechRecognition: null,
     isListening: false,
     bookmarks: new Set(["IS 1239 (Part 1) : 2004", "IS 2062 : 2011"]),
+    conversationHistory: [],
     standardsSearchDebounce: null
 };
 
@@ -72,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadDashboardMetrics();
     loadStandardsCatalog();
     loadComplaintsLog();
+    loadUserWatchlist();
 });
 
 // ========================================================
@@ -487,8 +489,8 @@ async function loadLandingPageData() {
             const m = dashData.value.metrics;
             const auditsEl = document.getElementById("homeAuditsCount");
             const stdEl = document.getElementById("statTotalStandards");
-            if (auditsEl) auditsEl.innerText = m.certificates * 7 || "128";
-            if (stdEl) stdEl.innerText = `${m.standards_tracked || 18}+ Standards`;
+            if (auditsEl) auditsEl.innerText = String(m.reports ?? 0);
+            if (stdEl) stdEl.innerText = `${m.standards_tracked ?? 0} Standards`;
         }
 
         if (histData.status === "fulfilled" && histData.value?.history?.length > 0) {
@@ -544,7 +546,11 @@ async function handleAiChatSubmit(event) {
     const typingBubbleId = appendChatBubble("bot", `<i class="fa-solid fa-spinner fa-spin"></i> Analyzing Indian Standards & legal codes...`, `<i class="fa-solid fa-wand-magic-sparkles"></i>`);
 
     try {
-        const res = await aiApi.query(query, STATE.attachedDocumentContext, STATE.attachedDocumentFilename);
+        if (!STATE.conversationHistory) {
+            STATE.conversationHistory = [];
+        }
+
+        const res = await aiApi.query(query, STATE.attachedDocumentContext, STATE.attachedDocumentFilename, STATE.conversationHistory);
         
         // Remove typing indicator
         document.getElementById(typingBubbleId)?.remove();
@@ -584,6 +590,19 @@ async function handleAiChatSubmit(event) {
             }
 
             appendChatBubble("bot", contentHtml, `<i class="fa-solid fa-wand-magic-sparkles"></i>`, true);
+
+            // Record conversation history
+            STATE.conversationHistory.push({
+                role: "user",
+                content: query,
+                query: query
+            });
+            STATE.conversationHistory.push({
+                role: "assistant",
+                content: res.answer,
+                answer: res.answer,
+                recommended_standard: res.recommended_standard
+            });
         } else {
             appendChatBubble("bot", "No matching standard guidance found. Please try rephrasing your product inquiry.", `<i class="fa-solid fa-wand-magic-sparkles"></i>`);
         }
@@ -618,6 +637,7 @@ function appendChatBubble(sender, content, avatarContent, isRawHtml = false) {
 }
 
 function resetAiChatSession() {
+    STATE.conversationHistory = [];
     const feed = document.getElementById("chatFeed");
     if (feed) {
         feed.innerHTML = `
@@ -788,7 +808,7 @@ async function handleDocumentUpload(file) {
 function renderDocumentIntelligenceResult(doc) {
     if (!doc) return;
 
-    const score = doc.compliance_score || doc.compliance?.score || 78;
+    const score = Number(doc.compliance_score ?? doc.compliance?.score ?? 0);
     const scoreEl = document.getElementById("displayScore");
     const verdictEl = document.getElementById("displayVerdict");
     const gaugeCircle = document.getElementById("gaugeCircle");
@@ -827,23 +847,57 @@ function renderDocumentIntelligenceResult(doc) {
     const reqCounter = document.getElementById("checklistCounter");
 
     if (reqList && doc.requirements && doc.requirements.length > 0) {
-        const passedCount = doc.requirements.filter(r => r.status === "PASS").length;
-        const failedCount = doc.requirements.length - passedCount;
+        const counts = doc.status_counts || {};
+        const passedCount = counts.pass ?? doc.requirements.filter(r => r.status === "PASS").length;
+        const failedCount = counts.fail ?? doc.requirements.filter(r => r.status === "FAIL").length;
+        const partialCount = counts.partial ?? doc.requirements.filter(r => r.status === "PARTIAL").length;
+        const unknownCount = (counts.unknown ?? 0) + (counts.not_found ?? 0);
 
-        if (reqCounter) reqCounter.innerText = `Total Checklist: ${doc.requirements.length} (${passedCount} passed, ${failedCount} failed)`;
+        if (reqCounter) reqCounter.innerText = `Total: ${doc.requirements.length} | PASS ${passedCount} | FAIL ${failedCount} | PARTIAL ${partialCount} | UNKNOWN ${unknownCount}`;
 
         reqList.innerHTML = doc.requirements.map(req => {
             const isPass = req.status === "PASS";
+            const isFail = req.status === "FAIL";
+            const isPartial = req.status === "PARTIAL";
+            let badgeClass = "badge-neutral";
+            let icon = "fa-solid fa-circle-question";
+            if (isPass) {
+                badgeClass = "badge-success";
+                icon = "fa-solid fa-circle-check pass";
+            } else if (isFail) {
+                badgeClass = "badge-danger";
+                icon = "fa-solid fa-circle-xmark fail";
+            } else if (isPartial) {
+                badgeClass = "badge-warning";
+                icon = "fa-solid fa-triangle-exclamation warning";
+            }
+
+            const reqTitle = req.requirement || req.title || "Standard Requirement";
+            const evidenceText = req.evidence || "No corresponding evidence located in uploaded text";
+            const clauseText = req.source_clause || req.clause || "Clause Reference";
+            const observedText = req.observed_value !== undefined && req.observed_value !== null ? req.observed_value : "Not Specified";
+            const sourceText = req.source || "BIS Verification Engine";
+
             return `
-                <div class="req-item">
-                    <div class="req-left">
-                        <i class="fa-solid ${isPass ? 'fa-circle-check pass' : 'fa-triangle-exclamation fail'} req-status-icon"></i>
-                        <div>
-                            <div class="req-title">${escapeHtml(req.clause || req.parameter || "Standard Requirement")}</div>
-                            <div class="req-extract">${escapeHtml(req.extracted_value || req.observed || "")}</div>
+                <div class="req-item" style="display: flex; justify-content: space-between; align-items: flex-start; padding: 12px 14px; border-bottom: 1px solid var(--border-light, #eaedf2); gap: 12px;">
+                    <div class="req-left" style="display: flex; gap: 12px; align-items: flex-start; flex: 1;">
+                        <i class="${icon} req-status-icon" style="font-size: 1.1rem; margin-top: 3px;"></i>
+                        <div style="flex: 1;">
+                            <div class="req-title" style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+                                <span style="color: var(--primary); font-family: monospace;">${escapeHtml(req.id || "REQ")}:</span> ${escapeHtml(reqTitle)}
+                            </div>
+                            <div class="req-extract" style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 4px; line-height: 1.4;">
+                                <strong>Document Evidence:</strong> ${escapeHtml(evidenceText)}
+                            </div>
+                            <div class="req-meta-row" style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.74rem; color: var(--text-muted);">
+                                <span><strong>BIS Clause:</strong> ${escapeHtml(clauseText)}</span>
+                                <span><strong>Observed:</strong> ${escapeHtml(String(observedText))}</span>
+                                <span><strong>Source:</strong> ${escapeHtml(sourceText)}</span>
+                            </div>
+                            ${req.reason ? `<div class="req-reason" style="margin-top: 4px; font-size: 0.74rem; color: ${isFail ? 'var(--danger)' : 'var(--text-secondary)'};"><i class="fa-solid fa-info-circle"></i> ${escapeHtml(req.reason)}</div>` : ""}
                         </div>
                     </div>
-                    <span class="badge ${isPass ? 'badge-success' : 'badge-danger'}">${isPass ? 'Pass' : 'Fail'}</span>
+                    <span class="badge ${badgeClass}" style="flex-shrink: 0; font-weight: 600; font-size: 0.72rem; padding: 4px 8px;">${escapeHtml(req.status || "UNKNOWN")}</span>
                 </div>
             `;
         }).join("");
@@ -917,6 +971,10 @@ async function loadStandardsCatalog() {
         const list = res.standards || [];
 
         if (countEl) countEl.innerText = `Showing ${list.length} of ${res.count || "24,012"} Standards`;
+        const totalLibCountEl = document.getElementById("libraryTotalStandardsCount");
+        if (totalLibCountEl) {
+            totalLibCountEl.innerText = `${res.count || list.length} Active`;
+        }
 
         if (!list || list.length === 0) {
             if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted);">No standards found matching your criteria. Try searching "IS 1239" or "steel".</td></tr>`;
@@ -994,13 +1052,45 @@ async function openStandardModal(isNumber) {
     }
 }
 
-function toggleBookmark(isNumber) {
-    if (STATE.bookmarks.has(isNumber)) {
-        STATE.bookmarks.delete(isNumber);
-        showToast(`Removed ${isNumber} from Watchlist.`, "info");
-    } else {
-        STATE.bookmarks.add(isNumber);
-        showToast(`Bookmarked ${isNumber} to Watchlist!`, "success");
+async function loadUserWatchlist() {
+    try {
+        const res = await standardsApi.getWatchlist();
+        if (res && res.watchlist) {
+            STATE.bookmarks = new Set(res.watchlist.map(w => typeof w === "object" && w !== null ? w.is_number : w));
+        }
+    } catch (err) {
+        console.warn("Could not load user watchlist:", err);
+    }
+}
+
+async function toggleBookmark(isNumber) {
+    try {
+        const res = await standardsApi.toggleWatchlist(isNumber);
+        if (res && res.bookmarked !== undefined) {
+            if (res.bookmarked) {
+                STATE.bookmarks.add(isNumber);
+                showToast(`Bookmarked ${isNumber} to your Watchlist!`, "success");
+            } else {
+                STATE.bookmarks.delete(isNumber);
+                showToast(`Removed ${isNumber} from Watchlist.`, "info");
+            }
+        } else {
+            if (STATE.bookmarks.has(isNumber)) {
+                STATE.bookmarks.delete(isNumber);
+                showToast(`Removed ${isNumber} from Watchlist.`, "info");
+            } else {
+                STATE.bookmarks.add(isNumber);
+                showToast(`Bookmarked ${isNumber} to Watchlist!`, "success");
+            }
+        }
+    } catch (err) {
+        if (STATE.bookmarks.has(isNumber)) {
+            STATE.bookmarks.delete(isNumber);
+            showToast(`Removed ${isNumber} from Watchlist.`, "info");
+        } else {
+            STATE.bookmarks.add(isNumber);
+            showToast(`Bookmarked ${isNumber} to Watchlist!`, "success");
+        }
     }
     loadStandardsCatalog();
 }
@@ -1097,10 +1187,15 @@ async function handleComplaintSubmit(event) {
     }
 }
 
-function investigateComplaint(id, subject) {
-    showToast(`Investigating complaint record ${id}: ${subject}`, "info");
-    navigateTo("ai-chat");
-    loadPromptQuery(`Audit violation details and applicable legal enforcement clauses for complaint ${id}: ${subject}`);
+async function investigateComplaint(id, subject) {
+    try {
+        const result = await complaintsApi.investigate(id);
+        showToast(result.message || `Investigation opened for ${id}`, "success");
+        loadComplaintsLog();
+        loadNotificationsCount();
+    } catch (err) {
+        showToast(err.message || `Could not start investigation for ${id}`, "error");
+    }
 }
 
 // ========================================================
@@ -1127,7 +1222,8 @@ async function loadNotificationsHub() {
     if (!container) return;
 
     try {
-        const res = await notificationsApi.getAll();
+        const activeTab = document.querySelector("#notifCategoryTabs .notif-tab.active");
+        const res = await notificationsApi.getAll({ category: activeTab?.dataset.category || "all" });
         const notifs = res.notifications || [];
 
         if (notifs.length === 0) {

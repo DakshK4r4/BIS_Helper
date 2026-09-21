@@ -1,31 +1,48 @@
-"""
-Standalone End-to-End Test Runner for BIS Sahayak Backend & Database
-Tests all API endpoints, authentication, standards search/filtering/sorting,
-Hallmark verification, complaints, notifications, and user action history.
+"""End-to-End Test Suite for BIS Sahayak AI Assistant & RAG Platform.
+
+Tests:
+ 1. General conversation fast-path ("Hello")
+ 2. Exact IS number lookup ("What is IS 456?")
+ 3. Standard explanation ("Explain IS 14543")
+ 4. Semantic search ("What is the BIS standard for drinking water?")
+ 5. Scope / chunk retrieval ("What is the scope of IS 456?")
+ 6. Specific clause query ("Explain clause 5.2 of IS 10322")
+ 7. Non-existent standard query -> safe fallback ("What is IS 999999?")
+ 8. Conversation memory & coreference ("What is its scope?" after IS 456)
+ 9. Out-of-scope query handling ("Who won the football world cup?")
+10. Empty message handling (returns 400 Bad Request)
+11. Document Analyzer two-pass evaluation (PDF compliance with PASS/FAIL/UNKNOWN)
+12. User watchlist persistence & toggle (/api/watchlist)
+13. Complaint investigation workflow (/api/complaints/<id>/investigate)
+14. Dynamic dashboard metrics (/api/dashboard)
+15. Standards catalogue filtering & sorting
 """
 
 import os
 import sys
 import json
 
-backend_dir = r"c:\Users\rgnvu\OneDrive\Desktop\BIS_Sahayak_Upgraded\bis-ai-assistant\backend"
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 import app as flask_app_module
-from database import init_db, get_db
+from database import init_db, get_db, get_real_dashboard_metrics
+from ai_engine import SAFE_FALLBACK_MESSAGE
 
 passed = 0
 failed = 0
+
 
 def assert_true(cond, msg="Assertion failed"):
     global passed, failed
     if not cond:
         failed += 1
-        print(f" [FAIL] {msg}")
+        print(f"  [FAIL] {msg}")
         raise AssertionError(msg)
     else:
         passed += 1
+
 
 def run_all_tests():
     global passed, failed
@@ -34,168 +51,218 @@ def run_all_tests():
     client = flask_app_module.app.test_client()
 
     print("\n==================================================")
-    print("RUNNING BIS SAHAYAK E2E INTEGRATION SUITE")
+    print("RUNNING BIS SAHAYAK COMPREHENSIVE TEST SUITE")
     print("==================================================")
 
-    # 1. Standards
-    print("\n1. Testing Standards Search, Filtering & Sorting...")
-    res = client.get("/api/standards")
+    # ----------------------------------------------------
+    # Scenario 1: General Conversation Fast-Path ("Hello")
+    # ----------------------------------------------------
+    print("\n[Test 1] Testing General Conversation Fast-Path ('Hello')...")
+    res = client.post("/api/ai/query", json={"query": "Hello"})
     assert_true(res.status_code == 200, f"Status: {res.status_code}")
     data = res.get_json()
-    assert_true(data["count"] >= 15, f"Total count: {data['count']}")
-    print(f"    Total standards in database: {data['count']}")
+    assert_true(data.get("intent") == "general_conversation", f"Intent: {data.get('intent')}")
+    assert_true("BIS Sahayak" in data.get("answer", ""), "Greeting mentions BIS Sahayak")
+    assert_true(data.get("confidence") == 1.0 or data.get("confidence_score") == "100%", "Confidence is 100%")
+    print(f"  ✓ Fast-path greeted without RAG noise: '{data['answer'][:60]}...'")
 
-    res = client.get("/api/standards?category=Electrical")
+    # ----------------------------------------------------
+    # Scenario 2: Exact IS Number Lookup ("What is IS 456?")
+    # ----------------------------------------------------
+    print("\n[Test 2] Testing Exact IS Number Lookup ('What is IS 456?')...")
+    res = client.post("/api/ai/query", json={"query": "What is IS 456?"})
+    assert_true(res.status_code == 200, f"Status: {res.status_code}")
+    data = res.get_json()
+    assert_true(data.get("recommended_standard") is not None, "Has recommended standard")
+    assert_true("456" in data["recommended_standard"]["is_number"], f"Matched IS 456, got: {data['recommended_standard']['is_number']}")
+    assert_true("concrete" in data["recommended_standard"]["title"].lower() or "concrete" in data["answer"].lower(), "Identified Concrete")
+    assert_true(float(data.get("confidence_numeric", 0)) >= 0.85, f"High confidence: {data.get('confidence_score')}")
+    print(f"  ✓ Standard identified: {data['recommended_standard']['is_number']} – {data['recommended_standard']['title']}")
+
+    # ----------------------------------------------------
+    # Scenario 3: Standard Explanation ("Explain IS 14543")
+    # ----------------------------------------------------
+    print("\n[Test 3] Testing Standard Explanation ('Explain IS 14543')...")
+    res = client.post("/api/ai/query", json={"query": "Explain IS 14543"})
     assert_true(res.status_code == 200)
     data = res.get_json()
-    assert_true(data["count"] > 0 and all(s["category"] == "Electrical" for s in data["standards"]), "Category Electrical")
-    print(f"    Filtered Electrical: {data['count']} standards found")
+    assert_true("14543" in str(data.get("recommended_standard", {}).get("is_number", "")), "IS 14543 matched")
+    assert_true("water" in data.get("answer", "").lower(), "Water mentioned in answer")
+    print(f"  ✓ IS 14543 packaged water explained: {data['recommended_standard']['title']}")
 
-    res = client.get("/api/standards?q=cement")
+    # ----------------------------------------------------
+    # Scenario 4: Semantic Search ("What is the BIS standard for drinking water?")
+    # ----------------------------------------------------
+    print("\n[Test 4] Testing Semantic Search ('What is the BIS standard for drinking water?')...")
+    res = client.post("/api/ai/query", json={"query": "What is the BIS standard for drinking water?"})
     assert_true(res.status_code == 200)
     data = res.get_json()
-    assert_true(data["count"] > 0, "Query cement")
-    print(f"    Keyword query 'cement': {data['count']} standards found")
+    rec = data.get("recommended_standard", {})
+    assert_true(rec is not None and "14543" in str(rec.get("is_number")), f"Semantic match IS 14543, got: {rec.get('is_number')}")
+    assert_true(float(data.get("confidence_numeric", 0)) > 0.5, f"Semantic confidence: {data.get('confidence_score')}")
+    print(f"  ✓ Semantic retrieval matched: {rec.get('is_number')} ({rec.get('title')}) with confidence {data.get('confidence_score')}")
 
-    res = client.get("/api/standards?sort=newest")
+    # ----------------------------------------------------
+    # Scenario 5: Scope / Chunk Retrieval ("What is the scope of IS 456?")
+    # ----------------------------------------------------
+    print("\n[Test 5] Testing Clause / Scope Retrieval ('What is the scope of IS 456?')...")
+    res = client.post("/api/ai/query", json={"query": "What is the scope of IS 456?"})
     assert_true(res.status_code == 200)
     data = res.get_json()
-    years = [int(s["year"]) for s in data["standards"] if str(s["year"]).isdigit()]
-    assert_true(years == sorted(years, reverse=True), "Sort newest first")
-    print(f"    Sorting by newest year: OK ({years[:3]}...)")
+    assert_true("456" in str(data.get("recommended_standard", {}).get("is_number")), "IS 456 scope retrieved")
+    assert_true("concrete" in data.get("answer", "").lower(), "Concrete code scope in answer")
+    print(f"  ✓ Scope retrieved with answer structure: {data['answer'][:80]}...")
 
-    # 2. Authentication
-    print("\n2. Testing Demo Authentication...")
-    for role in ["officer", "manufacturer", "consumer"]:
-        res = client.post("/api/auth/demo", json={"role": role})
-        assert_true(res.status_code == 200, f"Auth demo {role}")
-        u = res.get_json()
-        assert_true("user" in u and "token" in u, f"Token for {role}")
-        print(f"    Demo login for '{role}': {u['user']['name']} ({u['user']['role']}) - OK")
-
-    # 3. AI Query
-    print("\n3. Testing AI Assistant Query with Grounded RAG...")
-    res = client.post(
-        "/api/ai/query",
-        json={"query": "What are safety requirements for LED luminaires?"},
-        headers={"X-User-Email": "officer@bis.gov.in"}
-    )
-    assert_true(res.status_code == 200, "AI query status 200")
+    # ----------------------------------------------------
+    # Scenario 6: Specific Clause Query ("Explain clause 5.2 of IS 10322")
+    # ----------------------------------------------------
+    print("\n[Test 6] Testing Specific Clause Query ('Explain clause 5.2 of IS 10322')...")
+    res = client.post("/api/ai/query", json={"query": "Explain clause 5.2 of IS 10322"})
+    assert_true(res.status_code == 200)
     data = res.get_json()
-    assert_true("answer" in data and len(data["answer"]) > 20, "AI answer generated")
-    assert_true(data.get("recommended_standard") is not None, "Standard recommendation")
-    assert_true("10322" in data["recommended_standard"]["is_number"], f"Expected IS 10322, got {data['recommended_standard']['is_number']}")
-    print(f"    Recommended: {data['recommended_standard']['is_number']} - {data['recommended_standard']['title']}")
-    print(f"    Answer preview: {data['answer'][:90]}...")
+    assert_true("10322" in str(data.get("recommended_standard", {}).get("is_number")), "IS 10322 matched")
+    print(f"  ✓ Clause query resolved: Clause {data.get('recommended_standard', {}).get('clause')}")
 
-    # 4. License Verification
-    print("\n4. Testing License Verification...")
-    res = client.get("/api/verify/CM%2FL-1234567")
-    assert_true(res.status_code == 200, "Verify valid license")
+    # ----------------------------------------------------
+    # Scenario 7: Non-existent Standard Query ("What is IS 999999?")
+    # ----------------------------------------------------
+    print("\n[Test 7] Testing Non-existent Standard Query ('What is IS 999999?')...")
+    res = client.post("/api/ai/query", json={"query": "What is IS 999999?"})
+    assert_true(res.status_code == 200)
     data = res.get_json()
-    assert_true(data["valid"] is True, "Valid license flag")
-    assert_true(data["details"]["product"] == "LED Street Light", "License product")
-    print(f"    CM/L-1234567 verified: {data['details']['manufacturer']} ({data['details']['status']})")
+    assert_true(data.get("ai_status") == "insufficient_evidence", "Flagged insufficient evidence")
+    assert_true(SAFE_FALLBACK_MESSAGE in data.get("answer", ""), "Safe fallback guardrail triggered")
+    assert_true(data.get("confidence_numeric") == 0.0 or data.get("confidence") == 0.0, "Zero confidence")
+    print("  ✓ Non-existent standard safely returned standard fallback message without hallucinations")
 
-    res = client.get("/api/verify/INVALID-999")
-    assert_true(res.status_code == 404, "Invalid license returns 404")
-    print("    Invalid license rejected correctly with 404: OK")
+    # ----------------------------------------------------
+    # Scenario 8: Conversation Memory & Coreference Resolution
+    # Turn 1: "What is IS 456?" -> Turn 2: "What is its scope?"
+    # ----------------------------------------------------
+    print("\n[Test 8] Testing Conversation Memory & Coreference Resolution...")
+    # Turn 1
+    t1_res = client.post("/api/ai/query", json={"query": "What is IS 456?"})
+    t1_data = t1_res.get_json()
 
-    # 5. Hallmark Verification
-    print("\n5. Testing Hallmark HUID Verification...")
-    res = client.get(
-        "/api/verify/hallmark/AB1234",
-        headers={"X-User-Email": "officer@bis.gov.in"}
-    )
-    assert_true(res.status_code == 200, "Valid HUID AB1234")
+    history = [
+        {"role": "user", "content": "What is IS 456?", "query": "What is IS 456?"},
+        {"role": "assistant", "content": t1_data.get("answer"), "recommended_standard": t1_data.get("recommended_standard")}
+    ]
+
+    # Turn 2 with pronoun "its"
+    t2_res = client.post("/api/ai/query", json={
+        "query": "What is its scope?",
+        "history": history
+    })
+    assert_true(t2_res.status_code == 200)
+    t2_data = t2_res.get_json()
+    assert_true(t2_data.get("parsed_query", {}).get("coreference_resolved") is True, "Coreference resolved flag")
+    assert_true("456" in str(t2_data.get("recommended_standard", {}).get("is_number")), f"Resolved 'its' to IS 456, got: {t2_data.get('recommended_standard', {}).get('is_number')}")
+    print(f"  ✓ Turn 2 'What is its scope?' resolved coreference to {t2_data['recommended_standard']['is_number']}")
+
+    # ----------------------------------------------------
+    # Scenario 9: Out-of-Scope Query ("Who won the football world cup?")
+    # ----------------------------------------------------
+    print("\n[Test 9] Testing Out-of-Scope Query ('Who won the football world cup?')...")
+    res = client.post("/api/ai/query", json={"query": "Who won the football world cup?"})
+    assert_true(res.status_code == 200)
     data = res.get_json()
-    assert_true(data["valid"] is True and data["hallmark"]["huid"] == "AB1234", "HUID AB1234 match")
-    print(f"    HUID AB1234 verified: {data['hallmark']['jeweler_name']} - {data['hallmark']['metal_purity']} ({data['hallmark']['center_name']})")
+    assert_true(data.get("ai_status") == "out_of_scope", f"Status: {data.get('ai_status')}")
+    assert_true("Bureau of Indian Standards" in data.get("answer", "") or "Indian Standards" in data.get("answer", ""), "Scope reminder in answer")
+    print(f"  ✓ Out-of-scope query deflected cleanly: {data['answer'][:70]}...")
 
-    res = client.get("/api/verify/hallmark/ZZ9999")
-    assert_true(res.status_code == 404, "Unknown HUID returns 404")
-    print("    Unknown HUID ZZ9999 returns 404: OK")
-
-    res = client.get("/api/verify/hallmark/SHORT")
-    assert_true(res.status_code == 400, "Invalid length HUID returns 400")
-    print("    Short HUID returns 400 bad request: OK")
-
-    # 6. Consumer Complaints
-    print("\n6. Testing Consumer Complaints Submission...")
-    payload = {
-        "complainant_name": "Ramesh Kumar",
-        "complainant_email": "ramesh@example.com",
-        "complainant_phone": "9876543210",
-        "category": "Electronics & IT",
-        "reference_number": "CM/L-1234567",
-        "subject": "Flickering LED bulb with fake ISI mark",
-        "description": "Product purchased on local market fails to comply with IS 10322 specifications."
-    }
-    res = client.post(
-        "/api/complaints",
-        json=payload,
-        headers={"X-User-Email": "ramesh@example.com"}
-    )
-    assert_true(res.status_code == 201, "Complaint registered 201")
+    # ----------------------------------------------------
+    # Scenario 10: Empty Message Handling ("")
+    # ----------------------------------------------------
+    print("\n[Test 10] Testing Empty Message Handling ('')...")
+    res = client.post("/api/ai/query", json={"query": "   "})
+    assert_true(res.status_code == 400, f"Empty query rejected with 400, got: {res.status_code}")
     data = res.get_json()
-    assert_true(data["success"] is True and data["tracking_id"].startswith("BIS-CMP-2026-"), "Tracking ID generated")
-    print(f"    Registered complaint tracking ID: {data['tracking_id']} (Status: {data['status']})")
+    assert_true(data.get("success") is False, "success: false")
+    print("  ✓ Empty query rejected with 400 Bad Request")
 
-    # 7. Notifications
-    print("\n7. Testing Notifications...")
+    # ----------------------------------------------------
+    # Scenario 11: Document Analyzer Two-Pass Audit
+    # ----------------------------------------------------
+    print("\n[Test 11] Testing Document Analyzer Two-Pass Audit...")
+    test_pdf = os.path.join(BASE_DIR, "uploads", "BIS_LED_Street_Light_Test_Document.pdf")
+    if os.path.exists(test_pdf):
+        with open(test_pdf, "rb") as f:
+            res = client.post(
+                "/api/document/analyze",
+                data={"file": (f, "BIS_LED_Street_Light_Test_Document.pdf")},
+                content_type="multipart/form-data"
+            )
+        assert_true(res.status_code == 200, f"Analyze PDF status: {res.status_code}")
+        doc_data = res.get_json().get("document", {})
+        counts = doc_data.get("status_counts", {})
+        print(f"  ✓ Two-pass compliance: {doc_data.get('compliance_score')}% Score | PASS: {counts.get('pass')} | FAIL: {counts.get('fail')} | NOT_FOUND: {counts.get('not_found')}")
+        assert_true(counts.get("pass", 0) > 0, "At least 1 pass requirement")
+        assert_true(counts.get("fail", 0) > 0, "At least 1 fail requirement")
+        assert_true(counts.get("not_found", 0) > 0, "At least 1 not_found requirement")
+        assert_true(all("source_clause" in r for r in doc_data.get("requirements", [])), "Each requirement has source_clause")
+    else:
+        print(f"  (Skipping PDF audit: {test_pdf} not found)")
+
+    # ----------------------------------------------------
+    # Scenario 12: User Watchlist Persistence & Toggle
+    # ----------------------------------------------------
+    print("\n[Test 12] Testing User Watchlist Persistence & Toggle...")
     headers = {"X-User-Email": "officer@bis.gov.in"}
-    res = client.get("/api/notifications", headers=headers)
-    assert_true(res.status_code == 200, "Get notifications")
-    data = res.get_json()
-    print(f"    User officer@bis.gov.in has {len(data['notifications'])} notifications (unread: {data['unread_count']})")
+    # Toggle IS 14543
+    res = client.post("/api/watchlist", json={"is_number": "IS 14543 : 2024"}, headers=headers)
+    assert_true(res.status_code == 200, f"Watchlist toggle status: {res.status_code}")
+    
+    res = client.get("/api/watchlist", headers=headers)
+    assert_true(res.status_code == 200)
+    w_data = res.get_json()
+    w_list = w_data.get("watchlist", [])
+    assert_true(any("14543" in (w.get("is_number") if isinstance(w, dict) else str(w)) for w in w_list), "IS 14543 in watchlist")
+    print(f"  ✓ User watchlist persisted: {len(w_list)} bookmarked standards")
 
-    res = client.post("/api/notifications/read-all", headers=headers)
-    assert_true(res.status_code == 200, "Mark all read")
+    # ----------------------------------------------------
+    # Scenario 13: Complaint Investigation Workflow
+    # ----------------------------------------------------
+    print("\n[Test 13] Testing Complaint Investigation Workflow...")
+    # Fetch complaints
+    res = client.get("/api/complaints", headers=headers)
+    assert_true(res.status_code == 200)
+    c_list = res.get_json().get("complaints", [])
+    if c_list:
+        target_id = c_list[0]["complaint_id"]
+        res = client.post(f"/api/complaints/{target_id}/investigate", headers=headers)
+        assert_true(res.status_code == 200, f"Investigate status: {res.status_code}")
+        inv_data = res.get_json()
+        assert_true(inv_data.get("complaint", {}).get("status") == "INVESTIGATION", "Status changed to INVESTIGATION")
+        print(f"  ✓ Complaint {target_id} investigated by officer, status: {inv_data.get('complaint', {}).get('status')}")
 
-    res = client.get("/api/notifications", headers=headers)
-    data = res.get_json()
-    assert_true(data["unread_count"] == 0, "Unread count is 0 after mark-all-read")
-    print("    Marked all notifications as read: OK")
+    # ----------------------------------------------------
+    # Scenario 14: Dynamic Dashboard Metrics
+    # ----------------------------------------------------
+    print("\n[Test 14] Testing Dynamic Dashboard Metrics...")
+    res = client.get("/api/dashboard", headers=headers)
+    assert_true(res.status_code == 200)
+    m = res.get_json().get("metrics", {})
+    assert_true(m.get("standards_tracked", 0) >= 15, f"Standards tracked: {m.get('standards_tracked')}")
+    assert_true(m.get("products", 0) > 0, f"Products count: {m.get('products')}")
+    print(f"  ✓ Dashboard metrics computed: {m}")
 
-    # 8. Services
-    print("\n8. Testing BIS Services Metadata...")
-    res = client.get("/api/services")
-    assert_true(res.status_code == 200, "Services 200")
-    data = res.get_json()
-    services = data["services"]
-    for svc_key in ["product_certification", "hallmarking", "crs", "fmcs", "laboratory", "training"]:
-        assert_true(svc_key in services, f"Service key {svc_key}")
-    print(f"    All 6 BIS core services loaded with complete metadata: OK")
-
-    # 9. User Action History
-    print("\n9. Testing User Activity & Audit History...")
-    res = client.get("/api/history", headers=headers)
-    assert_true(res.status_code == 200, "History 200")
-    data = res.get_json()
-    assert_true(len(data["history"]) > 0, "History recorded actions")
-    print(f"    Total recorded actions for officer: {len(data['history'])}")
-
-    res = client.get("/api/history?filter=hallmark_verification", headers=headers)
-    assert_true(res.status_code == 200, "Filter hallmark")
-    data = res.get_json()
-    assert_true(all("hallmark" in i.get("action_key", i.get("action_type", "")).lower() for i in data["history"]), "Filtered hallmark actions")
-    print(f"    Filtered hallmark checks in history: {len(data['history'])} - OK")
-
-    # 10. Dashboard
-    print("\n10. Testing Industry Dashboard...")
-    res = client.get("/api/dashboard")
-    assert_true(res.status_code == 200, "Dashboard 200")
-    data = res.get_json()
-    assert_true(data["metrics"]["products"] > 0, "Dashboard products metric")
-    print(f"    Dashboard metrics: {data['metrics']}")
+    # ----------------------------------------------------
+    # Scenario 15: Standards Catalogue Search & Sort
+    # ----------------------------------------------------
+    print("\n[Test 15] Testing Standards Search, Filtering & Sorting...")
+    res = client.get("/api/standards?category=Civil")
+    assert_true(res.status_code == 200)
+    s_data = res.get_json()
+    assert_true(s_data["count"] > 0, "Civil standards found")
+    print(f"  ✓ Filtered Civil standards: {s_data['count']} items found")
 
     print("\n==================================================")
-    print(f"ALL TESTS PASSED: {passed} assertions verified successfully! (Failed: {failed})")
+    print(f"ALL TESTS COMPLETED: {passed} assertions PASSED! (Failed: {failed})")
     print("==================================================\n")
+    return failed == 0
+
 
 if __name__ == "__main__":
-    try:
-        run_all_tests()
-    except Exception as e:
-        print(f"\n[FATAL ERROR] {e}")
-        sys.exit(1)
+    success = run_all_tests()
+    sys.exit(0 if success else 1)

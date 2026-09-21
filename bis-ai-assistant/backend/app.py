@@ -2,11 +2,10 @@ import os
 import json
 import random
 import uuid
-import base64
 import requests
 from datetime import datetime
 
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -25,7 +24,8 @@ from database import (
 )
 from ai_engine import process_ai_query
 from compliance_engine import analyze_compliance
-from document_engine import extract_document, generate_summary, analyze_document_content
+from document_engine import generate_summary, analyze_document_content
+from document_processor import process_document
 
 
 # ============================================================
@@ -37,7 +37,14 @@ app = Flask(__name__)
 # Restrict CORS to authorized origins
 CORS(app, resources={
     r"/api/*": {
-        "origins": ["http://localhost:5000", "http://localhost:5001", "http://127.0.0.1:5000", "http://127.0.0.1:5001"],
+        "origins": [
+            "http://localhost:5000",
+            "http://localhost:5001",
+            "http://localhost:5501",
+            "http://127.0.0.1:5000",
+            "http://127.0.0.1:5001",
+            "http://127.0.0.1:5501"
+        ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization", "X-User-Email"]
     }
@@ -94,7 +101,8 @@ def static_proxy(filename):
 def get_current_user():
     """
     Extract currently authenticated user from Bearer token (with session expiry validation).
-    Falls back to X-User-Email or demo officer in development/evaluation mode only.
+    Accepts only a server-side session in production.  Header and demo
+    identities are deliberately limited to local development/evaluation.
     """
     auth_header = request.headers.get("Authorization", "")
     token = None
@@ -106,7 +114,7 @@ def get_current_user():
         if user:
             return user
 
-    email = request.headers.get("X-User-Email", "").strip()
+    email = request.headers.get("X-User-Email", "").strip() if ENV != "production" else ""
     conn = get_db()
     if email:
         row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
@@ -122,12 +130,7 @@ def get_current_user():
             return dict(row)
 
     conn.close()
-    return {
-        "id": "usr_officer_demo_01",
-        "email": "officer@bis.gov.in",
-        "name": "Raj Kumar",
-        "role": "BIS Quality Assurance Officer"
-    }
+    abort(401, description="Authentication is required.")
 
 
 def is_officer_user(user):
@@ -163,16 +166,6 @@ def auth_google():
                 user_info = res.json()
         except Exception as e:
             print("Google tokeninfo remote check notice:", e)
-
-        # In non-production/offline testing, allow fallback decoding with explicit warning
-        if not user_info and ENV != "production":
-            parts = credential.split(".")
-            if len(parts) >= 2:
-                payload_b64 = parts[1]
-                padded = payload_b64 + "=" * ((4 - len(payload_b64) % 4) % 4)
-                decoded_bytes = base64.urlsafe_b64decode(padded)
-                user_info = json.loads(decoded_bytes.decode("utf-8"))
-                print("[Auth Notice] Decoded unverified JWT in development mode.")
 
         if not user_info or "email" not in user_info:
             return jsonify({
@@ -231,6 +224,8 @@ def auth_demo():
     Developer / evaluation sign-in explicitly flagged for non-production environments.
     """
     try:
+        if ENV == "production":
+            return jsonify({"success": False, "error": "Demo authentication is disabled in production."}), 404
         data = request.get_json(silent=True) or {}
         email = data.get("email", "officer@bis.gov.in").lower().strip()
         name = data.get("name", "Raj Kumar").strip()
@@ -306,11 +301,12 @@ def ai_query():
         query = data.get("query", "").strip()
         doc_context = data.get("document_context", None)
         doc_filename = data.get("document_filename", None)
+        history = data.get("history") or data.get("conversation_history") or []
 
         if not query:
             return jsonify({"success": False, "error": "Query is required."}), 400
 
-        result = process_ai_query(query, doc_context, doc_filename)
+        result = process_ai_query(query, doc_context, doc_filename, conversation_history=history)
         result["success"] = True
 
         user = get_current_user()
@@ -546,11 +542,13 @@ def validate_file_content(file_stream, ext):
 
 
 @app.route("/api/documents/upload", methods=["POST"])
+@app.route("/api/document/analyze", methods=["POST"])
 def upload_document():
     """
     Secure Document Upload & Compliance Analysis Pipeline.
     Supports: PDF, DOCX, PNG, JPG, JPEG with OCR.
     """
+    save_path = None
     try:
         user = get_current_user()
 
@@ -585,7 +583,8 @@ def upload_document():
         file.save(save_path)
 
         # Extract text via unified document processor
-        extracted_text = extract_document(save_path)
+        extraction = process_document(save_path)
+        extracted_text = extraction.get("text", "")
 
         # Analyze extracted content against shared BIS Knowledge Base
         analysis = analyze_document_content(extracted_text, original_filename)
@@ -601,13 +600,13 @@ def upload_document():
         """, (
             user["id"],
             original_filename,
-            save_path,
+            None,
             ext,
             extracted_text,
             summary,
             compliance_score,
-            1 if ext in ["png", "jpg", "jpeg"] else 0,
-            "PROCESSED",
+            1 if extraction.get("ocr_used") else 0,
+            extraction.get("status", "PROCESSED"),
             datetime.now().isoformat()
         ))
         doc_id = cursor.lastrowid
@@ -626,6 +625,13 @@ def upload_document():
         ))
         conn.commit()
         conn.close()
+        # Uploads are processed in a private transient directory.  Only the
+        # extracted, user-owned analysis is persisted; no server file path is
+        # retained or returned through the API.
+        try:
+            os.remove(save_path)
+        except OSError:
+            app.logger.warning("Could not remove transient upload")
 
         # Log history & notification
         add_user_history(
@@ -654,6 +660,11 @@ def upload_document():
         })
 
     except Exception as error:
+        if save_path and os.path.exists(save_path):
+            try:
+                os.remove(save_path)
+            except OSError:
+                app.logger.warning("Could not remove failed transient upload")
         print("DOCUMENT UPLOAD ERROR:", error)
         return jsonify({
             "success": False,
@@ -671,15 +682,15 @@ def get_all_documents():
         conn = get_db()
         if is_officer:
             rows = conn.execute("""
-                SELECT id, user_id, filename, filepath, file_type, summary, compliance_score, ocr_used, status, created_at, uploaded_at
+                SELECT id, user_id, filename, file_type, summary, compliance_score, ocr_used, status, created_at, uploaded_at
                 FROM documents
                 ORDER BY id DESC
             """).fetchall()
         else:
             rows = conn.execute("""
-                SELECT id, user_id, filename, filepath, file_type, summary, compliance_score, ocr_used, status, created_at, uploaded_at
+                SELECT id, user_id, filename, file_type, summary, compliance_score, ocr_used, status, created_at, uploaded_at
                 FROM documents
-                WHERE user_id = ? OR user_id IS NULL
+                WHERE user_id = ?
                 ORDER BY id DESC
             """, (user["id"],)).fetchall()
         conn.close()
@@ -708,8 +719,10 @@ def get_single_document(document_id):
 
         doc_dict = dict(row)
         # Check ownership unless officer
-        if not is_officer and doc_dict.get("user_id") and doc_dict["user_id"] != user["id"]:
+        if not is_officer and doc_dict.get("user_id") != user["id"]:
             return jsonify({"success": False, "error": "Access denied to requested document."}), 403
+
+        doc_dict.pop("filepath", None)
 
         if doc_dict.get("extracted_text"):
             analysis = analyze_document_content(doc_dict["extracted_text"], doc_dict.get("filename", ""))
@@ -920,6 +933,8 @@ def investigate_complaint_route(complaint_id):
     """
     try:
         user = get_current_user()
+        if not is_officer_user(user):
+            return jsonify({"success": False, "error": "Only BIS officers may start an investigation."}), 403
         updated = db_investigate_complaint(complaint_id, user["id"], user.get("name"))
         if not updated:
             return jsonify({"success": False, "error": "Complaint not found."}), 404
@@ -1196,6 +1211,10 @@ def get_dashboard_metrics():
 @app.errorhandler(404)
 def handle_404(e):
     return jsonify({"success": False, "error": "Endpoint not found."}), 404
+
+@app.errorhandler(401)
+def handle_401(e):
+    return jsonify({"success": False, "error": "Authentication is required or the session has expired."}), 401
 
 @app.errorhandler(413)
 def handle_413(e):
